@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Célula Moriá — Sua Palavra de Hoje</title>
+{% load static %}
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: #020617;
+    color: white;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1.25rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Stars */
+  .stars { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+  .star {
+    position: absolute; border-radius: 50%; background: white;
+    animation: twinkle var(--d) ease-in-out infinite;
+  }
+  @keyframes twinkle {
+    0%,100%{opacity:.15;transform:scale(1)}
+    50%{opacity:.9;transform:scale(1.4)}
+  }
+
+  .container { position: relative; z-index: 1; max-width: 480px; width: 100%; }
+
+  /* Flame ring */
+  .flame-ring {
+    width: 110px; height: 110px; border-radius: 50%;
+    background: radial-gradient(circle, #f97316 0%, #dc2626 50%, #7c3aed 100%);
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 1.75rem;
+    box-shadow: 0 0 40px rgba(249,115,22,.45), 0 0 80px rgba(124,58,237,.3);
+    animation: pulse-ring 3s ease-in-out infinite;
+  }
+  @keyframes pulse-ring {
+    0%,100%{box-shadow:0 0 30px rgba(249,115,22,.4),0 0 60px rgba(124,58,237,.25);transform:scale(1)}
+    50%{box-shadow:0 0 60px rgba(249,115,22,.65),0 0 100px rgba(124,58,237,.45);transform:scale(1.05)}
+  }
+  .flame-icon { font-size: 48px; line-height: 1; }
+
+  .tag {
+    font-size: 11px; font-weight: 600; letter-spacing: .15em; text-transform: uppercase;
+    color: #f97316; background: rgba(249,115,22,.12);
+    border: 1px solid rgba(249,115,22,.3); border-radius: 100px;
+    padding: 5px 16px; margin-bottom: 1.25rem; display: inline-block;
+  }
+
+  h1 {
+    font-size: clamp(1.9rem, 5vw, 2.75rem); font-weight: 700;
+    line-height: 1.15; margin-bottom: .9rem; letter-spacing: -.02em;
+  }
+  h1 span {
+    background: linear-gradient(135deg,#f97316,#f59e0b,#fbbf24);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .subtitle {
+    font-size: 1rem; color: rgba(255,255,255,.5); max-width: 360px;
+    line-height: 1.65; margin: 0 auto 2rem;
+  }
+
+  /* Verse card */
+  .verse-card {
+    background: rgba(255,255,255,.04);
+    border: 1px solid rgba(255,255,255,.1);
+    border-radius: 20px; padding: 2rem 1.75rem;
+    margin-bottom: 1.75rem; min-height: 130px;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    animation: fadeInUp .6s ease;
+  }
+  @keyframes fadeInUp {
+    from{opacity:0;transform:translateY(18px)}
+    to{opacity:1;transform:translateY(0)}
+  }
+
+  .verse-number {
+    font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: .12em; color: #f97316; margin-bottom: .65rem;
+  }
+
+  .verse-text {
+    font-size: 1.2rem; line-height: 1.65; color: white;
+  }
+
+  .verse-ref {
+    font-size: .82rem; color: rgba(255,255,255,.4);
+    margin-top: .75rem; font-style: italic;
+  }
+
+  /* Buttons */
+  .btn-primary {
+  background: linear-gradient(135deg,#f97316,#dc2626);
+  color: white;
+  border: none;
+  border-radius: 14px;
+  padding: 1rem 2rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+  cursor: pointer;
+  max-width: 320px;
+  width: fit-content;
+  margin: 0 auto .85rem; /* 👈 centraliza */
+  box-shadow: 0 4px 24px rgba(249,115,22,.35);
+  transition: all .2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-decoration: none;
+}
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(249,115,22,.5); }
+  .btn-primary:active { transform: scale(.98); }
+
+  .btn-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; max-width: 320px; margin: 0 auto; }
+
+  .btn-outline {
+    flex: 1; min-width: 130px;
+    background: rgba(255,255,255,.06); color: rgba(255,255,255,.75);
+    border: 1px solid rgba(255,255,255,.15); border-radius: 12px;
+    padding: .7rem 1rem; font-size: .88rem; cursor: pointer;
+    transition: all .2s; display: flex; align-items: center; justify-content: center; gap: 6px;
+    text-decoration: none;
+  }
+  .btn-outline:hover { background: rgba(255,255,255,.12); border-color: rgba(255,255,255,.3); color: white; }
+
+  .counter-badge {
+    margin-top: 2rem; font-size: .78rem; color: rgba(255,255,255,.3);
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .dot {
+    width: 5px; height: 5px; background: #22c55e;
+    border-radius: 50%; animation: blink 2s ease-in-out infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:.4} 50%{opacity:1} }
+
+  .features {
+    display: flex; gap: 1.5rem; flex-wrap: wrap;
+    justify-content: center; margin-top: 2rem;
+  }
+  .feat { display: flex; align-items: center; gap: 7px; font-size: .8rem; color: rgba(255,255,255,.3); }
+  .feat-dot { width: 6px; height: 6px; border-radius: 50%; background: #7c3aed; flex-shrink: 0; }
+
+  /* Typing cursor */
+  .cursor {
+    display: inline-block; width: 2px; height: 1.1em;
+    background: #f97316; margin-left: 2px;
+    vertical-align: text-bottom;
+    animation: blink-cursor .7s step-end infinite;
+  }
+  @keyframes blink-cursor { 0%,100%{opacity:1} 50%{opacity:0} }
+</style>
+</head>
+<body>
+
+<div class="stars" id="stars"></div>
+
+<div class="container">
+
+  <div class="flame-ring">
+    <span class="flame-icon">🔥</span>
+  </div>
+
+  <span class="tag">Célula Moriá</span>
+
+  <h1>Sua palavra<br>para <span>hoje</span></h1>
+
+  <p class="subtitle">Uma mensagem especial, escolhida para encorajar o seu coração neste momento.</p>
+
+  <div class="verse-card">
+  <div class="verse-number">🙏 Você é o nº {{ numero }} a receber</div>
+
+  {% if acabou %}
+    <div class="verse-text">
+      🙏 Todos os versículos já foram entregues hoje.<br>
+      Volte amanhã!
+    </div>
+  {% else %}
+    <div class="verse-text" id="verso"></div>
+    <div class="verse-ref">{{ referencia }}</div>
+  {% endif %}
+
+  </div>
+
+  <a href="/" class="btn-primary">
+    🔄 Receber outro versículo
+  </a>
+
+  <div class="btn-row">
+    <button class="btn-outline" onclick="amen(this)">🙌 Amém!</button>
+    <a class="btn-outline" id="whatsBtn" target="_blank" href="#">💬 WhatsApp</a>
+  </div>
+
+  <div class="counter-badge">
+    <div class="dot"></div>
+    <span>{{ numero }} bênção{{ numero|pluralize:"s" }} enviada{{ numero|pluralize:"s" }}</span>
+  </div>
+
+  <div style="margin-top:8px; font-size:0.75rem; color:rgba(255,255,255,.3);">
+  📖 {{ total }} versículos no total | 🎯 {{ disponiveis }} disponíveis
+  </div>
+
+  <div class="features">
+    <div class="feat"><div class="feat-dot"></div>Novos versículos toda semana</div>
+    <div class="feat"><div class="feat-dot"></div>Compartilhe no WhatsApp</div>
+    <div class="feat"><div class="feat-dot"></div>Gratuito para todos</div>
+  </div>
+
+</div>
+
+<script>
+  // Stars
+  const c = document.getElementById('stars');
+  for(let i=0;i<70;i++){
+    const s=document.createElement('div');
+    s.className='star';
+    const sz=Math.random()*2.5+.5;
+    s.style.cssText=`width:${sz}px;height:${sz}px;top:${Math.random()*100}%;left:${Math.random()*100}%;--d:${2+Math.random()*4}s;animation-delay:${Math.random()*5}s`;
+    c.appendChild(s);
+  }
+
+  // Typing effect
+  const texto = "{{ texto|escapejs }}";
+  const el = document.getElementById('verso');
+  let i = 0;
+  const cursor = document.createElement('span');
+  cursor.className = 'cursor';
+
+  function digitar(){
+    if(i < texto.length){
+      el.textContent = texto.slice(0, i+1);
+      el.appendChild(cursor);
+      i++;
+      setTimeout(digitar, 38);
+    } else {
+      setTimeout(() => cursor.remove(), 1200);
+    }
+  }
+  window.onload = digitar;
+
+  // WhatsApp
+  const msg = `🔥 *Célula Moriá*\n\n"{{ texto }}"\n_({{ referencia }})_\n\nReceba sua palavra também!`;
+  document.getElementById('whatsBtn').href = 'https://wa.me/?text=' + encodeURIComponent(msg);
+
+  // Amen button
+  function amen(btn){
+    btn.textContent = '✅ Amém!';
+    btn.style.color='#22c55e';
+    btn.style.borderColor='rgba(34,197,94,.4)';
+    setTimeout(()=>{
+      btn.textContent='🙌 Amém!';
+      btn.style.color='';
+      btn.style.borderColor='';
+    }, 2000);
+  }
+</script>
+
+</body>
+</html>
