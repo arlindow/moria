@@ -1,39 +1,68 @@
 from django.shortcuts import render
 from django.db import transaction
-from .models import Versiculo, Contador
+from django.utils import timezone
+from .models import Versiculo, ControleDiario, VersiculoUsado
+import random
+
 
 def versiculo_unico(request):
-    contador, _ = Contador.objects.get_or_create(id=1)
+    hoje = timezone.now().date()
 
+    controle, _ = ControleDiario.objects.get_or_create(data=hoje)
+
+    # 👉 SE NÃO CLICOU AINDA
+    if request.method != 'POST':
+        total = Versiculo.objects.count()
+
+        return render(request, 'versiculo.html', {
+            'texto': '',
+            'referencia': '',
+            'numero': controle.contador,
+            'total': total,
+            'disponiveis': total - controle.contador,
+            'acabou': False,
+            'inicial': True
+        })
+
+    # 👉 SE CLICOU
     with transaction.atomic():
-        disponiveis = Versiculo.objects.select_for_update().filter(usado=False)
 
-        # 🚨 Se acabou tudo
+        usados_ids = VersiculoUsado.objects.filter(
+            data=hoje
+        ).values_list('versiculo_id', flat=True)
+
+        disponiveis = Versiculo.objects.exclude(id__in=usados_ids)
+
         if not disponiveis.exists():
+            total = Versiculo.objects.count()
+
             return render(request, 'versiculo.html', {
                 'texto': 'Todos os versículos já foram entregues hoje 🙏',
                 'referencia': '',
-                'numero': contador.total,
+                'numero': controle.contador,
+                'total': total,
+                'disponiveis': 0,
                 'acabou': True
             })
 
-        # Escolhe um disponível
-        escolhido = disponiveis.order_by('?').first()
+        escolhido = random.choice(list(disponiveis))
 
-        escolhido.usado = True
-        escolhido.save()
+        VersiculoUsado.objects.create(
+            data=hoje,
+            versiculo=escolhido
+        )
 
-        contador.total += 1
-        contador.save()
+        controle.contador += 1
+        controle.save()
 
     total = Versiculo.objects.count()
-    disponiveis_count = Versiculo.objects.filter(usado=False).count()
 
     return render(request, 'versiculo.html', {
         'texto': escolhido.texto,
         'referencia': escolhido.referencia,
-        'numero': contador.total,
+        'numero': controle.contador,
         'total': total,
-        'disponiveis': disponiveis_count,
+        'disponiveis': total - controle.contador,
         'acabou': False
     })
+    
