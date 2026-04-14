@@ -1,4 +1,33 @@
+# Ambientes Virtuais
 venv/
+env/
+.venv/
+ENV/
+
+# Python (Arquivos compilados)
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+.Python
+
+# Django (Essencial)
+db.sqlite3
+db.sqlite3-journal
+staticfiles/
+media/
+
+# Variáveis de Ambiente e Segredos
 .env
+.python-version
+
+# IDEs (Evita subir configurações do seu editor)
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Sistema Operacional
+.DS_Store
+Thumbs.db
+

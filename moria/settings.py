@@ -3,11 +3,17 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-celula-moria-change-this-in-production-xyz123'
+# Substitua sua linha SECRET_KEY por esta:
+SECRET_KEY = os.environ.get('SECRET_KEY', 'chave-padrao-apenas-para-desenvolvimento-local')
 
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = ['*']
+# Substitua sua linha ALLOWED_HOSTS por esta:
+ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+
+RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
+if RENDER_EXTERNAL_HOSTNAME:
+    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
 INSTALLED_APPS = [
     'django.contrib.contenttypes',
