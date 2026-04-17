@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% block title %}Pedidos de Oração – Moriá{% endblock %}
+{% block content %}
+
+<h1 class="section-title">Pedidos de Oração</h1>
+
+<div class="grid-2">
+  <div>
+    <div class="card" style="margin-bottom: 1rem;">
+      <h2 style="font-size: 16px; font-weight: 600; margin-bottom: 1rem;">Enviar pedido</h2>
+      <form method="post">
+        {% csrf_token %}
+        <div class="form-group">
+          <label>Seu nome</label>
+          <input type="text" name="nome" required placeholder="Como quer ser identificado?">
+        </div>
+        <div class="form-group">
+          <label>Pedido de oração</label>
+          <textarea name="pedido" required placeholder="Compartilhe seu pedido..."></textarea>
+        </div>
+        <div class="form-group">
+          <label class="checkbox-row">
+            <input type="checkbox" name="anonimo">
+            Enviar como anônimo
+          </label>
+        </div>
+        <button type="submit" class="btn btn-teal btn-full">Enviar pedido</button>
+      </form>
+    </div>
+  </div>
+
+  <div>
+    <h2 style="font-size: 16px; font-weight: 600; margin-bottom: 1rem;">Pedidos ativos</h2>
+    {% for p in pedidos %}
+    <div class="card card-sm" style="margin-bottom: 10px; border-left: 3px solid {% if p.situacao == 'respondido' %}var(--teal){% else %}var(--purple){% endif %};">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
+        <p style="font-size: 13px; font-weight: 500;">{{ p.nome_exibido }}</p>
+        {% if p.situacao == 'respondido' %}
+        <span class="tag tag-teal">respondido</span>
+        {% else %}
+        <span class="tag tag-purple">orando</span>
+        {% endif %}
+      </div>
+      <p class="muted" style="line-height: 1.6;">{{ p.pedido }}</p>
+      {% if p.testemunho %}
+      <div style="margin-top: 8px; padding: 8px; background: var(--teal-light); border-radius: 8px;">
+        <p style="font-size: 12px; color: #085041;">🙏 {{ p.testemunho }}</p>
+      </div>
+      {% endif %}
+      <p style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">{{ p.criado_em|date:"d/m/Y" }}</p>
+    </div>
+    {% empty %}
+    <div class="card card-sm"><p class="muted">Nenhum pedido ainda.</p></div>
+    {% endfor %}
+  </div>
+</div>
+
+{% endblock %}

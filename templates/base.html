@@ -1,0 +1,175 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Célula Moriá{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --purple: #534AB7;
+      --purple-light: #EEEDFE;
+      --purple-dark: #3C3489;
+      --teal: #1D9E75;
+      --teal-light: #E1F5EE;
+      --coral: #D85A30;
+      --coral-light: #FAECE7;
+      --amber: #BA7517;
+      --amber-light: #FAEEDA;
+      --text: #1a1a2e;
+      --text-muted: #6b6b80;
+      --border: rgba(0,0,0,0.08);
+      --bg: #f8f7ff;
+      --card: #ffffff;
+      --radius: 16px;
+      --radius-sm: 10px;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── Nav ── */
+    nav {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      padding: 0 1.5rem;
+      position: sticky; top: 0; z-index: 100;
+    }
+    .nav-inner {
+      max-width: 900px; margin: 0 auto;
+      display: flex; align-items: center; justify-content: space-between;
+      height: 60px;
+    }
+    .nav-brand {
+      font-size: 18px; font-weight: 600;
+      color: var(--purple); text-decoration: none;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .nav-brand span { font-weight: 400; color: var(--text-muted); font-size: 14px; }
+    .nav-links { display: flex; gap: 4px; align-items: center; }
+    .nav-links a {
+      padding: 6px 12px; border-radius: var(--radius-sm);
+      font-size: 14px; text-decoration: none;
+      color: var(--text-muted); transition: all 0.15s;
+    }
+    .nav-links a:hover, .nav-links a.ativo {
+      background: var(--purple-light); color: var(--purple-dark);
+    }
+
+    /* ── Main ── */
+    main { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--card); border-radius: var(--radius);
+      border: 1px solid var(--border); padding: 1.5rem;
+    }
+    .card-sm { padding: 1rem 1.25rem; }
+
+    /* ── Botões ── */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      gap: 6px; padding: 10px 20px; border-radius: var(--radius-sm);
+      font-size: 14px; font-weight: 500; cursor: pointer;
+      text-decoration: none; border: none; transition: all 0.15s;
+    }
+    .btn-primary { background: var(--purple); color: #fff; }
+    .btn-primary:hover { background: var(--purple-dark); }
+    .btn-outline {
+      background: transparent; color: var(--purple);
+      border: 1px solid var(--purple);
+    }
+    .btn-outline:hover { background: var(--purple-light); }
+    .btn-teal { background: var(--teal); color: #fff; }
+    .btn-teal:hover { background: #0F6E56; }
+    .btn-full { width: 100%; }
+
+    /* ── Tags / badges ── */
+    .tag {
+      display: inline-block; font-size: 11px; font-weight: 500;
+      padding: 3px 10px; border-radius: 20px;
+    }
+    .tag-purple { background: var(--purple-light); color: var(--purple-dark); }
+    .tag-teal { background: var(--teal-light); color: #085041; }
+    .tag-coral { background: var(--coral-light); color: #712B13; }
+    .tag-amber { background: var(--amber-light); color: #633806; }
+
+    /* ── Grid ── */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    @media(max-width: 600px) {
+      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+      .nav-links a span { display: none; }
+    }
+
+    /* ── Formulários ── */
+    .form-group { margin-bottom: 1rem; }
+    .form-group label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; color: var(--text-muted); }
+    .form-group input, .form-group textarea, .form-group select {
+      width: 100%; padding: 10px 14px;
+      border: 1px solid var(--border); border-radius: var(--radius-sm);
+      font-family: inherit; font-size: 14px; background: var(--bg);
+      color: var(--text); transition: border-color 0.15s;
+    }
+    .form-group input:focus, .form-group textarea:focus {
+      outline: none; border-color: var(--purple);
+    }
+    .form-group textarea { resize: vertical; min-height: 80px; }
+    .checkbox-row { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+    .checkbox-row input { width: auto; }
+
+    /* ── Mensagens flash ── */
+    .messages { margin-bottom: 1.5rem; }
+    .message {
+      padding: 12px 16px; border-radius: var(--radius-sm);
+      font-size: 14px; margin-bottom: 8px;
+    }
+    .message-success { background: var(--teal-light); color: #085041; }
+    .message-error { background: var(--coral-light); color: #712B13; }
+
+    /* ── Misc ── */
+    .muted { color: var(--text-muted); font-size: 13px; }
+    .section-title { font-size: 20px; font-weight: 600; margin-bottom: 1rem; }
+    .divider { border: none; border-top: 1px solid var(--border); margin: 1.5rem 0; }
+  </style>
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <a href="{% url 'home' %}" class="nav-brand">
+      ✝ Moriá <span>célula</span>
+    </a>
+    <div class="nav-links">
+      <a href="{% url 'home' %}"><span>Início</span></a>
+      <a href="{% url 'reunioes' %}"><span>Reuniões</span></a>
+      <a href="{% url 'oracao' %}"><span>Oração</span></a>
+      <a href="{% url 'jogo_home' %}"><span>Jogo</span></a>
+    </div>
+  </div>
+</nav>
+
+<main>
+  {% if messages %}
+  <div class="messages">
+    {% for msg in messages %}
+    <div class="message message-{{ msg.tags }}">{{ msg }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% block content %}{% endblock %}
+</main>
+
+{% block extra_js %}{% endblock %}
+</body>
+</html>
