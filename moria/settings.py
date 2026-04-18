@@ -4,7 +4,7 @@ from decouple import config
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-me-in-production')
-DEBUG = config('DEBUG', default=False, cast=bool)
+DEBUG = config('DEBUG', default=True, cast=bool)
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='*').split(',')
 
 INSTALLED_APPS = [
@@ -103,8 +103,32 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# CSRF para Render
-CSRF_TRUSTED_ORIGINS = config(
+# HTTPS reverse-proxy support + CSRF trusted origins
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+
+# Ajuste definitivo para GitHub Codespaces (HTTPS) e Local
+_csrf_trusted_origins = config(
     'CSRF_TRUSTED_ORIGINS',
-    default='https://*.onrender.com'
-).split(',')
+    default='https://*.onrender.com,https://*.app.github.dev,https://*.github.dev'
+)
+
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in _csrf_trusted_origins.split(',')
+    if origin.strip()
+]
+
+# O Codespaces muitas vezes exige o protocolo HTTPS explicitamente para o localhost
+LOCAL_ORIGINS = [
+    'http://localhost:8000',
+    'https://localhost:8000',  # <-- Adicione esta linha (HTTPS)
+    'http://127.0.0.1:8000',
+    'https://127.0.0.1:8000',
+]
+
+CSRF_TRUSTED_ORIGINS.extend(LOCAL_ORIGINS)
+
+# Como você está no Codespaces, adicione também o seu domínio dinâmico atual
+# para garantir que o proxy do GitHub não seja barrado
+CSRF_TRUSTED_ORIGINS.append('https://ubiquitous-goggles-gj5wxqqp55rh9rpr-8000.app.github.dev')
