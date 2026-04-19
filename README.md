@@ -33,11 +33,17 @@ python manage.py popular_perguntas
 # 7. Crie um superusuário para o admin
 python manage.py createsuperuser
 
-# 8. Rode o servidor
+# 8. Adicione líderes e membros pelo /admin/
+- Os grupos `lideres` e `membros` são criados automaticamente após as migrações.
+- Use o painel admin para adicionar usuários e colocá-los no grupo correto.
+
+# 9. Rode o servidor
 python manage.py runserver
 ```
 
 Acesse: http://localhost:8000
+
+> O site é privado: ao abrir o navegador você será redirecionado para `/accounts/login/`.
 
 ---
 
@@ -93,6 +99,8 @@ moria/
 | `/` | Home com versículo, reuniões e avisos |
 | `/oracao/` | Pedidos de oração |
 | `/reunioes/` | Agenda de reuniões |
+| `/accounts/login/` | Página de login |
+| `/accounts/logout/` | Logout |
 | `/jogo/` | Home do jogo |
 | `/jogo/criar/` | Criar sala (líder) |
 | `/jogo/entrar/` | Entrar na sala (participante) |
