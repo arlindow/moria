@@ -65,7 +65,7 @@
       </div>
     </div>
 
-    <button id="btn-iniciar" class="btn btn-primary btn-full" onclick="iniciarJogo()" style="margin-bottom: 8px;">
+    <button id="btn-iniciar" class="btn btn-primary btn-full" onclick="iniciarJogo()" style="margin-bottom: 8px;" disabled>
       Iniciar jogo
     </button>
     <button id="btn-revelar" class="btn btn-outline btn-full" onclick="revelar()" style="display: none; margin-bottom: 8px;">
@@ -128,6 +128,7 @@ function conectar() {
 
   ws.onopen = () => {
     ws.send(JSON.stringify({ tipo: 'entrar', nome: 'Líder' }));
+    document.getElementById('btn-iniciar').disabled = false;
   };
 
   ws.onmessage = (e) => {
@@ -136,6 +137,7 @@ function conectar() {
     else if (msg.tipo === 'nova_pergunta') mostrarPergunta(msg);
     else if (msg.tipo === 'revelacao') mostrarRevelacao(msg);
     else if (msg.tipo === 'fim_de_jogo') mostrarFim(msg.placar);
+    else if (msg.tipo === 'erro') alert('Erro: ' + msg.msg);
   };
 
   ws.onclose = () => setTimeout(conectar, 3000);

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import (
+from celula.models import (
     Versiculo, Reuniao, PedidoOracao, Aviso,
     TemaPergunta, Pergunta, SalaJogo, Jogador, Resposta
 )

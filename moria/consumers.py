@@ -152,7 +152,7 @@ class JogoConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def criar_jogador(self, nome):
-        from .models import SalaJogo, Jogador
+        from celula.models import SalaJogo, Jogador
         sala = SalaJogo.objects.get(codigo=self.codigo_sala)
         jogador, _ = Jogador.objects.get_or_create(
             sala=sala, nome=nome,
@@ -165,13 +165,13 @@ class JogoConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def marcar_desconectado(self):
-        from .models import Jogador
+        from celula.models import Jogador
         if hasattr(self, 'jogador_id'):
             Jogador.objects.filter(id=self.jogador_id).update(conectado=False)
 
     @database_sync_to_async
     def get_sala(self):
-        from .models import SalaJogo
+        from celula.models import SalaJogo
         sala = SalaJogo.objects.get(codigo=self.codigo_sala)
         return {
             'id': sala.id,
@@ -182,13 +182,13 @@ class JogoConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def get_perguntas(self):
-        from .models import SalaJogo
+        from celula.models import SalaJogo
         sala = SalaJogo.objects.get(codigo=self.codigo_sala)
         return [p.to_dict() for p in sala.perguntas_do_tema()]
 
     @database_sync_to_async
     def get_pergunta_id_atual(self):
-        from .models import SalaJogo
+        from celula.models import SalaJogo
         sala = SalaJogo.objects.get(codigo=self.codigo_sala)
         perguntas = sala.perguntas_do_tema()
         if sala.pergunta_atual < len(perguntas):
@@ -197,17 +197,17 @@ class JogoConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def set_sala_status(self, status):
-        from .models import SalaJogo
+        from celula.models import SalaJogo
         SalaJogo.objects.filter(codigo=self.codigo_sala).update(status=status)
 
     @database_sync_to_async
     def avancar_pergunta(self, indice):
-        from .models import SalaJogo
+        from celula.models import SalaJogo
         SalaJogo.objects.filter(codigo=self.codigo_sala).update(pergunta_atual=indice)
 
     @database_sync_to_async
     def get_jogadores(self):
-        from .models import SalaJogo
+        from celula.models import SalaJogo
         sala = SalaJogo.objects.get(codigo=self.codigo_sala)
         return [
             {'id': j.id, 'nome': j.nome, 'pontos': j.pontos, 'conectado': j.conectado}
@@ -216,7 +216,7 @@ class JogoConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def salvar_resposta(self, pergunta_id, opcao, tempo):
-        from .models import Jogador, Pergunta, Resposta
+        from celula.models import Jogador, Pergunta, Resposta
         jogador = Jogador.objects.get(id=self.jogador_id)
         pergunta = Pergunta.objects.get(id=pergunta_id)
 
@@ -237,7 +237,7 @@ class JogoConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def todos_responderam(self, pergunta_id):
-        from .models import SalaJogo, Resposta
+        from celula.models import SalaJogo, Resposta
         sala = SalaJogo.objects.get(codigo=self.codigo_sala)
         total_jogadores = sala.jogadores.filter(conectado=True).count()
         total_respostas = Resposta.objects.filter(
@@ -247,7 +247,7 @@ class JogoConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def get_resultado_pergunta(self, pergunta_id):
-        from .models import Pergunta, Resposta, SalaJogo
+        from celula.models import Pergunta, Resposta, SalaJogo
         sala = SalaJogo.objects.get(codigo=self.codigo_sala)
         pergunta = Pergunta.objects.get(id=pergunta_id)
         respostas = Resposta.objects.filter(pergunta=pergunta, jogador__sala=sala)
@@ -265,7 +265,7 @@ class JogoConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def get_placar(self):
-        from .models import SalaJogo
+        from celula.models import SalaJogo
         sala = SalaJogo.objects.get(codigo=self.codigo_sala)
         return [
             {'nome': j.nome, 'pontos': j.pontos}
