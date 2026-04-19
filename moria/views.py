@@ -2,14 +2,20 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse
 from django.utils import timezone
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from celula.models import (
     Versiculo, Reuniao, PedidoOracao, Aviso,
     SalaJogo, TemaPergunta, Jogador
 )
 
 
+def is_lider(user):
+    return user.is_superuser or user.groups.filter(name='lideres').exists()
+
+
 # ─── Página principal ────────────────────────────────────────────────────────
 
+@login_required
 def home(request):
     versiculo = Versiculo.objects.filter(ativo=True).first()
     reunioes = Reuniao.objects.filter(data__gte=timezone.now()).order_by('data')[:3]
@@ -26,6 +32,7 @@ def home(request):
 
 # ─── Pedidos de oração ───────────────────────────────────────────────────────
 
+@login_required
 def oracao(request):
     if request.method == 'POST':
         nome = request.POST.get('nome', '').strip()
@@ -43,6 +50,7 @@ def oracao(request):
 
 # ─── Reuniões ─────────────────────────────────────────────────────────────────
 
+@login_required
 def reunioes(request):
     proximas = Reuniao.objects.filter(data__gte=timezone.now()).order_by('data')
     passadas = Reuniao.objects.filter(data__lt=timezone.now()).order_by('-data')[:5]
@@ -54,12 +62,21 @@ def reunioes(request):
 
 # ─── Jogo ─────────────────────────────────────────────────────────────────────
 
+@login_required
 def jogo_home(request):
     temas = TemaPergunta.objects.filter(ativo=True)
-    return render(request, 'jogo/home.html', {'temas': temas})
+    return render(request, 'jogo/home.html', {
+        'temas': temas,
+        'is_lider': is_lider(request.user),
+    })
 
 
+@login_required
 def jogo_criar(request):
+    if not is_lider(request.user):
+        messages.error(request, 'Apenas líderes podem criar salas.')
+        return redirect('jogo_home')
+
     if request.method == 'POST':
         tema_id = request.POST.get('tema_id')
         tema = get_object_or_404(TemaPergunta, id=tema_id)
@@ -68,11 +85,17 @@ def jogo_criar(request):
     return redirect('jogo_home')
 
 
+@login_required
 def jogo_sala_lider(request, codigo):
+    if not is_lider(request.user):
+        messages.error(request, 'Apenas líderes podem acessar este painel.')
+        return redirect('jogo_home')
+
     sala = get_object_or_404(SalaJogo, codigo=codigo)
     return render(request, 'jogo/sala_lider.html', {'sala': sala})
 
 
+@login_required
 def jogo_entrar(request):
     if request.method == 'POST':
         codigo = request.POST.get('codigo', '').upper().strip()
@@ -101,6 +124,7 @@ def jogo_entrar(request):
 
 # ─── API simples (JSON) ───────────────────────────────────────────────────────
 
+@login_required
 def api_sala_status(request, codigo):
     sala = get_object_or_404(SalaJogo, codigo=codigo)
     jogadores = [

@@ -32,27 +32,32 @@
   <div class="card">
     <p style="font-weight: 600; font-size: 16px; margin-bottom: 6px;">Sou o líder</p>
     <p class="muted" style="margin-bottom: 1.25rem;">Crie uma sala e compartilhe o código com o grupo</p>
-    {% if temas %}
-    <form method="post" action="{% url 'jogo_criar' %}">
-      {% csrf_token %}
-      <div class="form-group">
-        <label>Tema da reunião</label>
-        <select name="tema_id">
-          {% for t in temas %}
-          <option value="{{ t.id }}">{{ t.nome }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <button type="submit" class="btn btn-primary btn-full">Criar sala</button>
-    </form>
-    {% else %}
-    <div style="padding: 12px; background: var(--amber-light); border-radius: 10px; font-size: 13px; color: #633806;">
-      Nenhum tema cadastrado. Acesse o <a href="/admin/celula/temapergunta/add/" style="color: var(--amber);">painel admin</a> para criar perguntas.
+      {% if is_lider %}
+        {% if temas %}
+        <form method="post" action="{% url 'jogo_criar' %}">
+          {% csrf_token %}
+          <div class="form-group">
+            <label>Tema da reunião</label>
+            <select name="tema_id">
+              {% for t in temas %}
+              <option value="{{ t.id }}">{{ t.nome }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary btn-full">Criar sala</button>
+        </form>
+        {% else %}
+        <div style="padding: 12px; background: var(--amber-light); border-radius: 10px; font-size: 13px; color: #633806;">
+          Nenhum tema cadastrado. Acesse o <a href="/admin/celula/temapergunta/add/" style="color: var(--amber);">painel admin</a> para criar perguntas.
+        </div>
+        {% endif %}
+      {% else %}
+        <div style="padding: 12px; background: var(--purple-light); border-radius: 10px; font-size: 13px; color: #3C3489;">
+          Você não tem permissão para criar salas. Peça a um líder para iniciar o jogo.
+        </div>
+      {% endif %}
     </div>
-    {% endif %}
-  </div>
 
-  <!-- Entrar (participante) -->
   <div class="card">
     <p style="font-weight: 600; font-size: 16px; margin-bottom: 6px;">Sou participante</p>
     <p class="muted" style="margin-bottom: 1.25rem;">Entre com o código que o líder compartilhou</p>
