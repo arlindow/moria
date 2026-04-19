@@ -33,6 +33,20 @@
   .badge-aguardando { background: var(--amber-light); color: #633806; }
   .badge-jogo { background: var(--teal-light); color: #085041; }
   .badge-encerrada { background: #F1EFE8; color: #5F5E5A; }
+  .choice-btn {
+    width: 100%; padding: 14px 16px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg); color: var(--text);
+    font-family: inherit; font-size: 14px;
+    cursor: pointer; text-align: left;
+    margin-bottom: 10px; transition: all 0.15s;
+    display: block;
+  }
+  .choice-btn:hover { border-color: var(--purple); background: var(--purple-light); }
+  .choice-btn.selecionado { border-color: var(--purple); background: var(--purple-light); color: var(--purple-dark); font-weight: 500; }
+  .choice-btn.certa { border-color: var(--teal); background: var(--teal-light); color: #085041; font-weight: 500; }
+  .choice-btn:disabled { cursor: default; }
 </style>
 {% endblock %}
 
@@ -95,6 +109,10 @@
       <p id="p-texto" style="font-size: 16px; font-weight: 600; line-height: 1.6; margin-bottom: 8px;"></p>
       <p id="p-versiculo" class="muted" style="font-style: italic; font-size: 13px; margin-bottom: 16px;"></p>
       <div id="p-opcoes"></div>
+      <div id="p-respondeu" style="display: none; text-align: center; padding: 1rem 0;">
+        <p style="font-size: 15px; font-weight: 500; color: var(--purple);">✓ Resposta enviada!</p>
+        <p class="muted">Aguardando todos responderem...</p>
+      </div>
       <div id="p-respostas" style="margin-top: 12px; font-size: 13px; color: var(--text-muted);"></div>
     </div>
 
@@ -108,6 +126,7 @@
       <p style="font-size: 22px; margin-bottom: 12px;">🎉</p>
       <p style="font-weight: 600; font-size: 16px; margin-bottom: 1rem;">Jogo encerrado!</p>
       <div id="placar-final"></div>
+      <a href="{% url 'jogo_home' %}" class="btn btn-outline" style="margin-top: 1rem;">Criar novo jogo</a>
     </div>
   </div>
 
@@ -122,6 +141,7 @@ const WS_URL = (location.protocol === 'https:' ? 'wss' : 'ws') + '://' + locatio
 
 let ws, timerInterval, timeLeft = 20;
 let perguntaAtual = null, totalPerguntas = 0, indicePergunta = 0;
+let respostaSelecionada = null, perguntaId = null, inicioResposta = 0;
 
 function conectar() {
   ws = new WebSocket(WS_URL);
@@ -135,6 +155,7 @@ function conectar() {
     const msg = JSON.parse(e.data);
     if (msg.tipo === 'jogadores_atualizados') atualizarJogadores(msg.jogadores);
     else if (msg.tipo === 'nova_pergunta') mostrarPergunta(msg);
+    else if (msg.tipo === 'resposta_confirmada') marcarResposta(msg);
     else if (msg.tipo === 'revelacao') mostrarRevelacao(msg);
     else if (msg.tipo === 'fim_de_jogo') mostrarFim(msg.placar);
     else if (msg.tipo === 'erro') alert('Erro: ' + msg.msg);
@@ -163,10 +184,36 @@ function iniciarJogo() {
   document.getElementById('status-badge').className = 'badge-jogo';
 }
 
+function responder(opcao, btn) {
+  if (respostaSelecionada) return;
+  respostaSelecionada = opcao;
+  const tempo = (Date.now() - inicioResposta) / 1000;
+
+  document.querySelectorAll('.choice-btn').forEach(b => { b.disabled = true; });
+  btn.classList.add('selecionado');
+  document.getElementById('p-respondeu').style.display = 'block';
+
+  ws.send(JSON.stringify({
+    tipo: 'responder',
+    opcao: opcao,
+    pergunta_id: perguntaId,
+    tempo: tempo,
+  }));
+}
+
+function marcarResposta(msg) {
+  if (msg.correta) {
+    document.querySelector('.choice-btn.selecionado')?.classList.replace('selecionado', 'certa');
+  }
+}
+
 function mostrarPergunta(msg) {
   perguntaAtual = msg.pergunta;
   indicePergunta = msg.indice;
   totalPerguntas = msg.total;
+  respostaSelecionada = null;
+  perguntaId = msg.pergunta.id;
+  inicioResposta = Date.now();
 
   document.getElementById('box-espera').style.display = 'none';
   document.getElementById('box-revelacao').style.display = 'none';
@@ -180,13 +227,17 @@ function mostrarPergunta(msg) {
   document.getElementById('p-texto').textContent = msg.pergunta.texto;
   document.getElementById('p-versiculo').textContent = msg.pergunta.versiculo ? '📖 ' + msg.pergunta.versiculo : '';
   document.getElementById('p-respostas').textContent = 'Aguardando respostas...';
+  document.getElementById('p-respondeu').style.display = 'none';
 
   const opcoes = document.getElementById('p-opcoes');
-  opcoes.innerHTML = msg.pergunta.opcoes.map(o =>
-    `<div style="padding:8px 12px;background:var(--bg);border-radius:8px;margin-bottom:6px;font-size:13px;">
-      <strong>${o.letra}.</strong> ${o.texto}
-    </div>`
-  ).join('');
+  opcoes.innerHTML = '';
+  msg.pergunta.opcoes.forEach(o => {
+    const btn = document.createElement('button');
+    btn.className = 'choice-btn';
+    btn.innerHTML = `<strong>${o.letra}.</strong> ${o.texto}`;
+    btn.onclick = () => responder(o.letra, btn);
+    opcoes.appendChild(btn);
+  });
 
   iniciarTimer();
 }
@@ -201,7 +252,11 @@ function iniciarTimer() {
     timeLeft--;
     txt.textContent = timeLeft + 's';
     bar.style.width = (timeLeft / 20 * 100) + '%';
-    if (timeLeft <= 0) { clearInterval(timerInterval); revelar(); }
+    if (timeLeft <= 0) {
+      clearInterval(timerInterval);
+      document.querySelectorAll('.choice-btn').forEach(b => b.disabled = true);
+      revelar();
+    }
   }, 1000);
 }
 
@@ -227,10 +282,11 @@ function mostrarRevelacao(msg) {
     const cnt = msg.contagem[letra] || 0;
     const pct = Math.round(cnt / total * 100);
     const cor = msg.pergunta.resposta_correta === letra ? '#1D9E75' : '#534AB7';
+    const minha = respostaSelecionada === letra;
     return `
       <div style="margin-bottom:10px;">
         <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;">
-          <span>${letra}. ${o.texto}${msg.pergunta.resposta_correta === letra ? ' ✓' : ''}</span>
+          <span style="${minha ? 'font-weight:600;' : ''}">${letra}. ${o.texto}${minha ? ' (você)' : ''}${msg.pergunta.resposta_correta === letra ? ' ✓' : ''}</span>
           <span>${pct}%</span>
         </div>
         <div style="height:10px;background:#eee;border-radius:5px;overflow:hidden;">
@@ -256,6 +312,11 @@ function mostrarFim(placar) {
   document.getElementById('btn-proxima').style.display = 'none';
   document.getElementById('status-badge').textContent = 'encerrado';
   document.getElementById('status-badge').className = 'badge-encerrada';
+
+  // Esconder o status após 5 segundos
+  setTimeout(() => {
+    document.getElementById('status-badge').style.display = 'none';
+  }, 5000);
 
   const medals = ['🥇', '🥈', '🥉'];
   document.getElementById('placar-final').innerHTML = placar.map((j, i) =>
