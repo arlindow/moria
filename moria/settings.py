@@ -4,7 +4,8 @@ import os
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Segurança
+# ── Segurança ─────────────────────────────────────────────────────────────────
+
 SECRET_KEY = config(
     'SECRET_KEY',
     default='django-insecure-change-me-in-production'
@@ -17,13 +18,18 @@ ALLOWED_HOSTS = config(
     default='localhost,127.0.0.1,.onrender.com'
 ).split(',')
 
+# Render injeta esta variável automaticamente com o domínio público do serviço
 RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
 if RENDER_EXTERNAL_HOSTNAME and RENDER_EXTERNAL_HOSTNAME not in ALLOWED_HOSTS:
     ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
+# ── Autenticação ──────────────────────────────────────────────────────────────
+
 LOGIN_URL = '/accounts/login/'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/accounts/login/'
+
+# ── Apps ──────────────────────────────────────────────────────────────────────
 
 INSTALLED_APPS = [
     'daphne',
@@ -36,6 +42,8 @@ INSTALLED_APPS = [
     'channels',
     'celula',
 ]
+
+# ── Middleware ────────────────────────────────────────────────────────────────
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -69,7 +77,8 @@ TEMPLATES = [
 WSGI_APPLICATION = 'moria.wsgi.application'
 ASGI_APPLICATION = 'moria.asgi.application'
 
-# Database
+# ── Banco de dados ────────────────────────────────────────────────────────────
+
 DATABASE_URL = config('DATABASE_URL', default='')
 
 if DATABASE_URL:
@@ -85,7 +94,10 @@ else:
         }
     }
 
-# Channels / Redis
+# ── Channels / Redis ──────────────────────────────────────────────────────────
+# Com Redis (produção): usa RedisChannelLayer
+# Sem Redis (desenvolvimento local): usa InMemoryChannelLayer
+
 REDIS_URL = config('REDIS_URL', default='')
 
 if REDIS_URL:
@@ -104,6 +116,8 @@ else:
         },
     }
 
+# ── Senhas ────────────────────────────────────────────────────────────────────
+
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
     {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
@@ -111,10 +125,14 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
+# ── Localização ───────────────────────────────────────────────────────────────
+
 LANGUAGE_CODE = 'pt-br'
 TIME_ZONE = 'America/Sao_Paulo'
 USE_I18N = True
 USE_TZ = True
+
+# ── Arquivos estáticos ────────────────────────────────────────────────────────
 
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
@@ -126,32 +144,35 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Proxy / HTTPS
+# ── Proxy / HTTPS ─────────────────────────────────────────────────────────────
+# Necessário para o Django reconhecer HTTPS atrás do proxy reverso do Render
+
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 USE_X_FORWARDED_HOST = True
 
-# CSRF Trusted Origins
-_csrf_trusted_origins = config(
+# ── CSRF Trusted Origins ──────────────────────────────────────────────────────
+# Origens configuráveis via variável de ambiente (separadas por vírgula)
+
+_csrf_env = config(
     'CSRF_TRUSTED_ORIGINS',
-    default='https://*.onrender.com,https://*.app.github.dev,https://*.github.dev'
+    default='https://*.onrender.com'
 )
 
 CSRF_TRUSTED_ORIGINS = [
     origin.strip()
-    for origin in _csrf_trusted_origins.split(',')
+    for origin in _csrf_env.split(',')
     if origin.strip()
 ]
 
-LOCAL_ORIGINS = [
+# Origens locais e de desenvolvimento sempre incluídas
+CSRF_TRUSTED_ORIGINS += [
     'http://localhost:8000',
     'https://localhost:8000',
     'http://127.0.0.1:8000',
     'https://127.0.0.1:8000',
-    'https://moria-versiculos.onrender.com',
 ]
 
-CSRF_TRUSTED_ORIGINS.extend(LOCAL_ORIGINS)
-
-CSRF_TRUSTED_ORIGINS.append(
-    'https://ubiquitous-goggles-gj5wxqqp55rh9rpr-8000.app.github.dev'
-)
+# Adiciona o domínio público do Render automaticamente quando disponível
+_render_host = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
+if _render_host:
+    CSRF_TRUSTED_ORIGINS.append(f'https://{_render_host}')
