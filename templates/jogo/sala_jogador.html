@@ -1,6 +1,174 @@
 {% extends 'base.html' %}
 {% block title %}{{ sala.codigo }} – Jogo Moriá{% endblock %}
 
+{% block extra_css %}
+<style>
+main{max-width:520px;padding:1rem;margin:auto}
+.tela{display:none;animation:fade .35s ease}
+.tela.ativa{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+.cardx{
+  background:#fff;
+  border:1px solid #e9e9ef;
+  border-radius:18px;
+  padding:1rem;
+  margin-bottom:1rem;
+  box-shadow:0 8px 24px rgba(0,0,0,.04);
+}
+
+.hero{
+  text-align:center;
+  padding:1.4rem;
+  border-radius:20px;
+  color:#fff;
+  background:linear-gradient(135deg,#534AB7,#322a8d);
+  margin-bottom:1rem;
+}
+
+.muted{opacity:.7;font-size:14px}
+.center{text-align:center}
+.badge{
+  display:inline-block;
+  padding:6px 12px;
+  border-radius:999px;
+  background:#efeefe;
+  color:#534AB7;
+  font-size:12px;
+  font-weight:700;
+}
+
+.choice-btn{
+  width:100%;
+  text-align:left;
+  padding:14px;
+  border-radius:14px;
+  border:1px solid #ddd;
+  background:#fff;
+  margin-bottom:10px;
+  cursor:pointer;
+  font-size:14px;
+  transition:.15s;
+}
+.choice-btn:hover{transform:translateY(-1px);border-color:#534AB7}
+.choice-btn.selecionado{background:#efeefe;border-color:#534AB7}
+.choice-btn.certa{background:#dff7ed;border-color:#1D9E75}
+.choice-btn.errada{background:#ffe5e5;border-color:#d44}
+
+.player{
+  padding:8px 12px;
+  border-radius:999px;
+  display:inline-block;
+  margin:4px;
+  font-size:13px;
+  background:#e8fbf4;
+}
+
+.timer{
+  font-size:24px;
+  font-weight:700;
+  color:#534AB7;
+}
+
+.barra{
+  height:8px;
+  background:#eee;
+  border-radius:999px;
+  overflow:hidden;
+  margin:10px 0 14px;
+}
+.barra div{
+  height:100%;
+  background:#534AB7;
+  width:100%;
+  transition:1s linear;
+}
+
+.ranking{
+  display:flex;
+  justify-content:space-between;
+  padding:10px 0;
+  border-bottom:1px solid #eee;
+}
+
+.top1{font-weight:700;color:#534AB7}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="hero">
+  <div style="font-size:34px;">🎮</div>
+  <h2 style="margin:8px 0;">Jogo Moriá</h2>
+  <div class="muted">Sala {{ sala.codigo }}</div>
+</div>
+
+<!-- conectando -->
+<div id="tela-conectando" class="tela ativa">
+  <div class="cardx center">
+    <div style="font-size:34px;">⏳</div>
+    <h3>Conectando...</h3>
+    <p class="muted" id="status-conexao">Preparando sala</p>
+  </div>
+</div>
+
+<!-- espera -->
+<div id="tela-espera" class="tela">
+  <div class="cardx center">
+    <div style="font-size:42px;">🙌</div>
+    <h3>Olá, {{ nome_jogador }}</h3>
+    <p class="muted">Aguardando o líder iniciar o jogo</p>
+  </div>
+
+  <div class="cardx">
+    <span class="badge">Jogadores conectados</span>
+    <div id="espera-jogadores" style="margin-top:10px;"></div>
+  </div>
+</div>
+
+<!-- pergunta -->
+<div id="tela-pergunta" class="tela">
+  <div class="cardx">
+    <div class="center timer" id="pq-timer">20s</div>
+
+    <div class="barra">
+      <div id="pq-barra"></div>
+    </div>
+
+    <h3 id="pq-texto"></h3>
+
+    <div id="pq-opcoes" style="margin-top:14px;"></div>
+  </div>
+</div>
+
+<!-- revelação -->
+<div id="tela-revelacao" class="tela">
+  <div class="cardx center">
+    <div style="font-size:34px;">📖</div>
+    <h3>Resultado</h3>
+    <p id="rv-texto"></p>
+  </div>
+</div>
+
+<!-- fim -->
+<div id="tela-fim" class="tela">
+  <div class="cardx center">
+    <div style="font-size:36px;">🏆</div>
+    <h3>Fim do jogo</h3>
+    <p class="muted">Parabéns a todos!</p>
+  </div>
+
+  <div class="cardx">
+    <div id="fim-placar"></div>
+  </div>
+
+  <div class="center">
+    <a href="{% url 'jogo_home' %}" class="btn btn-primary">Voltar</a>
+  </div>
+</div>
+
+{% endblock %}
+
 {% block extra_js %}
 <script>
 const CODIGO = "{{ sala.codigo }}";
@@ -11,77 +179,58 @@ const WS_URL =
 location.host +
 '/ws/jogo/' + CODIGO + '/';
 
-let ws = null;
-let reconectando = false;
-let tentativas = 0;
-let maxTentativas = 20;
+let ws=null;
+let timerInterval=null;
+let timeLeft=20;
+let perguntaId=null;
+let respostaSelecionada=null;
+let inicioResposta=0;
+let tentativas=0;
 
-let timerInterval = null;
-let timeLeft = 20;
-let respostaSelecionada = null;
-let perguntaId = null;
-let inicioResposta = 0;
-
-/* =========================
-   SOM
-========================= */
-
+/* sons */
 const somClick = new Audio('/static/sounds/click.mp3');
 const somAcerto = new Audio('/static/sounds/acerto.mp3');
 const somErro = new Audio('/static/sounds/erro.mp3');
 const somFim = new Audio('/static/sounds/fim.mp3');
 
-function tocar(audio){
-  audio.currentTime = 0;
-  audio.play().catch(()=>{});
+function tocar(a){
+  a.currentTime=0;
+  a.play().catch(()=>{});
 }
 
-/* =========================
-   UI
-========================= */
-
+/* telas */
 function mostrarTela(id){
   document.querySelectorAll('.tela').forEach(t=>{
     t.classList.remove('ativa');
   });
 
-  const el = document.getElementById(id);
+  const el=document.getElementById(id);
   if(el) el.classList.add('ativa');
 }
 
 function statusConexao(txt){
-  const el = document.getElementById('status-conexao');
-  if(el) el.textContent = txt;
+  const el=document.getElementById('status-conexao');
+  if(el) el.textContent=txt;
 }
 
-/* =========================
-   WEBSOCKET
-========================= */
-
+/* conexão */
 function conectar(){
 
-  if(ws && ws.readyState === WebSocket.OPEN){
-    return;
-  }
-
-  statusConexao("Conectando...");
+  statusConexao('Conectando servidor...');
   mostrarTela('tela-conectando');
 
   ws = new WebSocket(WS_URL);
 
-  ws.onopen = () => {
-
-    tentativas = 0;
-    reconectando = false;
-
-    statusConexao("Conectado");
+  ws.onopen = ()=>{
+    tentativas=0;
+    statusConexao('Conectado');
 
     setTimeout(()=>{
       ws.send(JSON.stringify({
         tipo:'entrar',
         nome:NOME
       }));
-    }, 400);
+    },300);
   };
 
   ws.onmessage = (e)=>{
@@ -115,99 +264,80 @@ function conectar(){
     }
   };
 
+  ws.onclose = ()=>{
+    tentativas++;
+    statusConexao('Reconectando...');
+
+    setTimeout(()=>{
+      conectar();
+    },2500);
+  };
+
   ws.onerror = ()=>{
     ws.close();
   };
-
-  ws.onclose = ()=>{
-
-    statusConexao("Reconectando...");
-
-    if(reconectando) return;
-
-    reconectando = true;
-
-    if(tentativas >= maxTentativas){
-      statusConexao("Falha de conexão");
-      return;
-    }
-
-    tentativas++;
-
-    setTimeout(()=>{
-      reconectando = false;
-      conectar();
-    }, 2500);
-  };
 }
 
-/* =========================
-   JOGADORES
-========================= */
-
+/* jogadores */
 function atualizarJogadores(lista){
 
-  const el = document.getElementById('espera-jogadores');
+  const el=document.getElementById('espera-jogadores');
 
-  el.innerHTML =
-    '<p>'+lista.length+' jogador(es)</p>' +
-    lista.map(j => `<div>${j.nome}</div>`).join('');
+  el.innerHTML = lista.map(j =>
+    `<span class="player">${j.nome}</span>`
+  ).join('');
 }
 
-/* =========================
-   PERGUNTA
-========================= */
-
+/* pergunta */
 function mostrarPergunta(msg){
 
-  respostaSelecionada = null;
-  perguntaId = msg.pergunta.id;
-  inicioResposta = Date.now();
+  respostaSelecionada=null;
+  perguntaId=msg.pergunta.id;
+  inicioResposta=Date.now();
 
   document.getElementById('pq-texto').textContent =
     msg.pergunta.texto;
 
-  document.getElementById('pq-opcoes').innerHTML = '';
+  const op=document.getElementById('pq-opcoes');
+  op.innerHTML='';
 
   msg.pergunta.opcoes.forEach(o=>{
 
-    const btn = document.createElement('button');
-    btn.className = 'choice-btn';
-    btn.innerHTML = `<strong>${o.letra}</strong> ${o.texto}`;
+    const btn=document.createElement('button');
+    btn.className='choice-btn';
+    btn.innerHTML=`<strong>${o.letra})</strong> ${o.texto}`;
 
-    btn.onclick = ()=>{
-      responder(o.letra, btn);
+    btn.onclick=()=>{
+      responder(o.letra,btn);
     };
 
-    document.getElementById('pq-opcoes').appendChild(btn);
+    op.appendChild(btn);
   });
 
   iniciarTimer();
-
   mostrarTela('tela-pergunta');
 }
-
-/* =========================
-   TIMER
-========================= */
 
 function iniciarTimer(){
 
   clearInterval(timerInterval);
 
-  timeLeft = 20;
+  timeLeft=20;
 
-  document.getElementById('pq-timer').textContent = '20s';
+  const txt=document.getElementById('pq-timer');
+  const barra=document.getElementById('pq-barra');
 
-  timerInterval = setInterval(()=>{
+  txt.textContent='20s';
+  barra.style.width='100%';
+
+  timerInterval=setInterval(()=>{
 
     timeLeft--;
 
-    document.getElementById('pq-timer').textContent =
-      timeLeft + 's';
+    txt.textContent=timeLeft+'s';
+    barra.style.width=(timeLeft/20*100)+'%';
 
-    if(timeLeft <= 0){
-
+    if(timeLeft<=0){
       clearInterval(timerInterval);
 
       document.querySelectorAll('.choice-btn')
@@ -217,22 +347,17 @@ function iniciarTimer(){
   },1000);
 }
 
-/* =========================
-   RESPONDER
-========================= */
-
-function responder(opcao, btn){
+function responder(opcao,btn){
 
   if(respostaSelecionada) return;
 
   tocar(somClick);
 
-  respostaSelecionada = opcao;
+  respostaSelecionada=opcao;
 
   clearInterval(timerInterval);
 
-  const tempo =
-    (Date.now() - inicioResposta) / 1000;
+  const tempo=(Date.now()-inicioResposta)/1000;
 
   document.querySelectorAll('.choice-btn')
   .forEach(b=>b.disabled=true);
@@ -249,8 +374,7 @@ function responder(opcao, btn){
 
 function marcarResposta(msg){
 
-  const btn =
-    document.querySelector('.choice-btn.selecionado');
+  const btn=document.querySelector('.choice-btn.selecionado');
 
   if(!btn) return;
 
@@ -263,10 +387,6 @@ function marcarResposta(msg){
   }
 }
 
-/* =========================
-   REVELAÇÃO
-========================= */
-
 function mostrarRevelacao(msg){
 
   clearInterval(timerInterval);
@@ -277,32 +397,25 @@ function mostrarRevelacao(msg){
   mostrarTela('tela-revelacao');
 }
 
-/* =========================
-   FIM
-========================= */
-
 function mostrarFim(placar){
 
   tocar(somFim);
 
-  const el = document.getElementById('fim-placar');
+  const medals=['🥇','🥈','🥉'];
 
-  el.innerHTML = placar.map((j,i)=>`
-    <div>
-      ${i+1}º ${j.nome} - ${j.pontos} pts
-    </div>
-  `).join('');
+  document.getElementById('fim-placar').innerHTML =
+    placar.map((j,i)=>`
+      <div class="ranking ${i===0?'top1':''}">
+        <span>${medals[i] || (i+1)+'º'} ${j.nome}</span>
+        <span>${j.pontos} pts</span>
+      </div>
+    `).join('');
 
   mostrarTela('tela-fim');
 }
 
-/* =========================
-   START COM DELAY
-========================= */
-
 setTimeout(()=>{
   conectar();
-}, 1200);
-
+},1200);
 </script>
 {% endblock %}
