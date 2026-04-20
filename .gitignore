@@ -19,6 +19,7 @@ media/
 
 # Variáveis de Ambiente e Segredos
 .env
+<<<<<<< HEAD
 .python-version
 
 # IDEs (Evita subir configurações do seu editor)
@@ -30,3 +31,7 @@ media/
 # Sistema Operacional
 .DS_Store
 Thumbs.db
+
+=======
+db.sqlite3
+>>>>>>> develop

@@ -3,6 +3,19 @@ from decouple import config
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+<<<<<<< HEAD
+# Substitua sua linha SECRET_KEY por esta:
+SECRET_KEY = os.environ.get('SECRET_KEY', 'chave-padrao-apenas-para-desenvolvimento-local')
+
+DEBUG = False
+
+# Substitua sua linha ALLOWED_HOSTS por esta:
+ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+
+RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
+if RENDER_EXTERNAL_HOSTNAME:
+    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
+=======
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-me-in-production')
 DEBUG = config('DEBUG', default=True, cast=bool)
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='*').split(',')
@@ -10,6 +23,7 @@ ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='*').split(',')
 LOGIN_URL = '/accounts/login/'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/accounts/login/'
+>>>>>>> develop
 
 INSTALLED_APPS = [
     'daphne',
