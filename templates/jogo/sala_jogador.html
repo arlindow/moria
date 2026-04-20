@@ -1,269 +1,308 @@
 {% extends 'base.html' %}
 {% block title %}{{ sala.codigo }} – Jogo Moriá{% endblock %}
 
-{% block extra_css %}
-<style>
-  main { max-width: 480px; padding: 1rem; }
-
-  .tela { display: none; }
-  .tela.ativa { display: block; }
-
-  .choice-btn {
-    width: 100%; padding: 14px 16px;
-    border: 1.5px solid var(--border);
-    border-radius: var(--radius-sm);
-    background: var(--bg); color: var(--text);
-    font-family: inherit; font-size: 14px;
-    cursor: pointer; text-align: left;
-    margin-bottom: 10px; transition: all 0.15s;
-    display: block;
-  }
-  .choice-btn:hover { border-color: var(--purple); background: var(--purple-light); }
-  .choice-btn.selecionado { border-color: var(--purple); background: var(--purple-light); color: var(--purple-dark); font-weight: 500; }
-  .choice-btn.certa { border-color: var(--teal); background: var(--teal-light); color: #085041; font-weight: 500; }
-  .choice-btn.errada { border-color: #D85A30; background: var(--coral-light); color: #712B13; opacity: 0.7; }
-  .choice-btn:disabled { cursor: default; }
-
-  .avatar {
-    width: 56px; height: 56px; border-radius: 50%;
-    background: var(--purple-light); color: var(--purple-dark);
-    font-size: 20px; font-weight: 700;
-    display: flex; align-items: center; justify-content: center;
-    margin: 0 auto 12px;
-  }
-</style>
-{% endblock %}
-
-{% block content %}
-
-<!-- Tela: conectando -->
-<div id="tela-conectando" class="tela ativa" style="text-align: center; padding: 3rem 0;">
-  <p style="font-size: 32px; margin-bottom: 12px;">⏳</p>
-  <p style="font-weight: 500; margin-bottom: 8px;">Entrando na sala...</p>
-  <p class="muted">{{ sala.codigo }}</p>
-</div>
-
-<!-- Tela: aguardando -->
-<div id="tela-espera" class="tela" style="text-align: center; padding: 2rem 0;">
-  <div class="avatar" id="av-inicial">{{ nome_jogador|slice:":1"|upper }}</div>
-  <p style="font-weight: 600; font-size: 18px; margin-bottom: 6px;">Olá, {{ nome_jogador }}!</p>
-  <p class="muted" style="margin-bottom: 1.5rem;">Aguardando o líder iniciar o jogo...</p>
-  <div class="card" style="background: var(--purple-light); border-color: #AFA9EC;">
-    <p style="font-size: 13px; font-style: italic; color: var(--purple-dark); line-height: 1.7; margin-bottom: 8px;">
-      "Não andeis ansiosos por coisa alguma; antes as vossas petições sejam conhecidas diante de Deus em toda oração e súplica, com ação de graças."
-    </p>
-    <p style="font-size: 12px; color: var(--purple);">Filipenses 4:6</p>
-  </div>
-  <div id="espera-jogadores" style="margin-top: 1rem;"></div>
-</div>
-
-<!-- Tela: pergunta -->
-<div id="tela-pergunta" class="tela">
-  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-    <span id="pq-contador" class="tag tag-purple"></span>
-    <span id="pq-timer" style="font-size: 16px; font-weight: 700; color: var(--purple);"></span>
-  </div>
-  <div style="height: 4px; background: #eee; border-radius: 2px; margin-bottom: 16px; overflow: hidden;">
-    <div id="pq-barra" style="height: 100%; background: var(--purple); transition: width 1s linear; width: 100%;"></div>
-  </div>
-  <div class="card" style="margin-bottom: 14px;">
-    <span id="pq-tipo" class="tag tag-coral" style="margin-bottom: 10px; display: inline-block;"></span>
-    <p id="pq-texto" style="font-size: 16px; font-weight: 600; line-height: 1.6; margin-bottom: 6px;"></p>
-    <p id="pq-versiculo" class="muted" style="font-style: italic; font-size: 13px;"></p>
-  </div>
-  <div id="pq-opcoes"></div>
-  <div id="pq-respondeu" style="display: none; text-align: center; padding: 1rem 0;">
-    <p style="font-size: 15px; font-weight: 500; color: var(--purple);">✓ Resposta enviada!</p>
-    <p class="muted">Aguardando todos responderem...</p>
-  </div>
-</div>
-
-<!-- Tela: revelação -->
-<div id="tela-revelacao" class="tela">
-  <p style="font-weight: 600; font-size: 16px; margin-bottom: 4px;">Resultado</p>
-  <p id="rv-contador" class="muted" style="margin-bottom: 12px;"></p>
-  <div class="card" style="margin-bottom: 12px;">
-    <p id="rv-texto" style="font-size: 14px; font-weight: 500; margin-bottom: 12px;"></p>
-    <div id="rv-barras"></div>
-  </div>
-  <div class="card" style="background: var(--teal-light); border-color: #5DCAA5;">
-    <p style="font-size: 12px; font-weight: 600; color: #0F6E56; margin-bottom: 6px;">Reflexão para o grupo</p>
-    <p id="rv-reflexao" style="font-size: 13px; color: #085041; line-height: 1.6;"></p>
-  </div>
-  <div id="rv-pontos" style="margin-top: 12px; text-align: center; display: none;">
-    <p style="font-size: 18px; font-weight: 700; color: var(--teal);" id="rv-pontos-txt"></p>
-  </div>
-</div>
-
-<!-- Tela: fim -->
-<div id="tela-fim" class="tela" style="text-align: center;">
-  <p style="font-size: 36px; margin-bottom: 12px;">🙏</p>
-  <p style="font-weight: 600; font-size: 18px; margin-bottom: 8px;">Parabéns!</p>
-  <div class="card" style="background: var(--purple-light); border-color: #AFA9EC; margin: 1rem 0; text-align: center;">
-    <p style="font-size: 13px; font-style: italic; color: var(--purple-dark); line-height: 1.7; margin-bottom: 8px;">
-      "A paz de Deus, que excede todo o entendimento, guardará os vossos corações e os vossos pensamentos em Cristo Jesus."
-    </p>
-    <p style="font-size: 12px; color: var(--purple);">Filipenses 4:7</p>
-  </div>
-  <div class="card">
-    <p style="font-weight: 600; margin-bottom: 12px;">Placar final</p>
-    <div id="fim-placar"></div>
-  </div>
-  <a href="{% url 'jogo_home' %}" class="btn btn-outline" style="margin-top: 1rem;">Jogar novamente</a>
-</div>
-
-{% endblock %}
-
 {% block extra_js %}
 <script>
 const CODIGO = "{{ sala.codigo }}";
 const NOME = "{{ nome_jogador|escapejs }}";
-const WS_URL = (location.protocol === 'https:' ? 'wss' : 'ws') + '://' + location.host + '/ws/jogo/' + CODIGO + '/';
 
-let ws, timerInterval, timeLeft = 20;
-let respostaSelecionada = null, perguntaId = null, inicioResposta = 0;
+const WS_URL =
+(location.protocol === 'https:' ? 'wss://' : 'ws://') +
+location.host +
+'/ws/jogo/' + CODIGO + '/';
 
-function mostrarTela(id) {
-  document.querySelectorAll('.tela').forEach(t => t.classList.remove('ativa'));
-  document.getElementById(id).classList.add('ativa');
+let ws = null;
+let reconectando = false;
+let tentativas = 0;
+let maxTentativas = 20;
+
+let timerInterval = null;
+let timeLeft = 20;
+let respostaSelecionada = null;
+let perguntaId = null;
+let inicioResposta = 0;
+
+/* =========================
+   SOM
+========================= */
+
+const somClick = new Audio('/static/sounds/click.mp3');
+const somAcerto = new Audio('/static/sounds/acerto.mp3');
+const somErro = new Audio('/static/sounds/erro.mp3');
+const somFim = new Audio('/static/sounds/fim.mp3');
+
+function tocar(audio){
+  audio.currentTime = 0;
+  audio.play().catch(()=>{});
 }
 
-function conectar() {
+/* =========================
+   UI
+========================= */
+
+function mostrarTela(id){
+  document.querySelectorAll('.tela').forEach(t=>{
+    t.classList.remove('ativa');
+  });
+
+  const el = document.getElementById(id);
+  if(el) el.classList.add('ativa');
+}
+
+function statusConexao(txt){
+  const el = document.getElementById('status-conexao');
+  if(el) el.textContent = txt;
+}
+
+/* =========================
+   WEBSOCKET
+========================= */
+
+function conectar(){
+
+  if(ws && ws.readyState === WebSocket.OPEN){
+    return;
+  }
+
+  statusConexao("Conectando...");
+  mostrarTela('tela-conectando');
+
   ws = new WebSocket(WS_URL);
 
   ws.onopen = () => {
-    ws.send(JSON.stringify({ tipo: 'entrar', nome: NOME }));
-    mostrarTela('tela-espera');
+
+    tentativas = 0;
+    reconectando = false;
+
+    statusConexao("Conectado");
+
+    setTimeout(()=>{
+      ws.send(JSON.stringify({
+        tipo:'entrar',
+        nome:NOME
+      }));
+    }, 400);
   };
 
-  ws.onmessage = (e) => {
+  ws.onmessage = (e)=>{
     const msg = JSON.parse(e.data);
-    if (msg.tipo === 'entrou') return;
-    if (msg.tipo === 'jogadores_atualizados') atualizarJogadores(msg.jogadores);
-    else if (msg.tipo === 'nova_pergunta') mostrarPergunta(msg);
-    else if (msg.tipo === 'resposta_confirmada') marcarResposta(msg);
-    else if (msg.tipo === 'revelacao') mostrarRevelacao(msg);
-    else if (msg.tipo === 'fim_de_jogo') mostrarFim(msg.placar);
+
+    switch(msg.tipo){
+
+      case 'entrou':
+        mostrarTela('tela-espera');
+        break;
+
+      case 'jogadores_atualizados':
+        atualizarJogadores(msg.jogadores);
+        break;
+
+      case 'nova_pergunta':
+        mostrarPergunta(msg);
+        break;
+
+      case 'resposta_confirmada':
+        marcarResposta(msg);
+        break;
+
+      case 'revelacao':
+        mostrarRevelacao(msg);
+        break;
+
+      case 'fim_de_jogo':
+        mostrarFim(msg.placar);
+        break;
+    }
   };
 
-  ws.onclose = () => setTimeout(conectar, 3000);
+  ws.onerror = ()=>{
+    ws.close();
+  };
+
+  ws.onclose = ()=>{
+
+    statusConexao("Reconectando...");
+
+    if(reconectando) return;
+
+    reconectando = true;
+
+    if(tentativas >= maxTentativas){
+      statusConexao("Falha de conexão");
+      return;
+    }
+
+    tentativas++;
+
+    setTimeout(()=>{
+      reconectando = false;
+      conectar();
+    }, 2500);
+  };
 }
 
-function atualizarJogadores(jogadores) {
+/* =========================
+   JOGADORES
+========================= */
+
+function atualizarJogadores(lista){
+
   const el = document.getElementById('espera-jogadores');
-  el.innerHTML = '<p class="muted" style="font-size:12px;margin-bottom:6px;">' + jogadores.length + ' na sala</p>' +
-    jogadores.map(j => `<span class="player-chip" style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;background:var(--teal-light);color:#085041;font-size:12px;margin:3px;">${j.nome}</span>`).join('');
+
+  el.innerHTML =
+    '<p>'+lista.length+' jogador(es)</p>' +
+    lista.map(j => `<div>${j.nome}</div>`).join('');
 }
 
-function mostrarPergunta(msg) {
+/* =========================
+   PERGUNTA
+========================= */
+
+function mostrarPergunta(msg){
+
   respostaSelecionada = null;
   perguntaId = msg.pergunta.id;
   inicioResposta = Date.now();
 
-  document.getElementById('pq-contador').textContent = `Pergunta ${msg.indice + 1} de ${msg.total}`;
-  document.getElementById('pq-tipo').textContent = msg.pergunta.tipo;
-  document.getElementById('pq-texto').textContent = msg.pergunta.texto;
-  document.getElementById('pq-versiculo').textContent = msg.pergunta.versiculo ? '📖 ' + msg.pergunta.versiculo : '';
-  document.getElementById('pq-respondeu').style.display = 'none';
+  document.getElementById('pq-texto').textContent =
+    msg.pergunta.texto;
 
-  const opcoes = document.getElementById('pq-opcoes');
-  opcoes.innerHTML = '';
-  msg.pergunta.opcoes.forEach(o => {
+  document.getElementById('pq-opcoes').innerHTML = '';
+
+  msg.pergunta.opcoes.forEach(o=>{
+
     const btn = document.createElement('button');
     btn.className = 'choice-btn';
-    btn.innerHTML = `<strong>${o.letra}.</strong> ${o.texto}`;
-    btn.onclick = () => responder(o.letra, btn);
-    opcoes.appendChild(btn);
+    btn.innerHTML = `<strong>${o.letra}</strong> ${o.texto}`;
+
+    btn.onclick = ()=>{
+      responder(o.letra, btn);
+    };
+
+    document.getElementById('pq-opcoes').appendChild(btn);
   });
 
   iniciarTimer();
+
   mostrarTela('tela-pergunta');
 }
 
-function iniciarTimer() {
+/* =========================
+   TIMER
+========================= */
+
+function iniciarTimer(){
+
   clearInterval(timerInterval);
+
   timeLeft = 20;
-  const barra = document.getElementById('pq-barra');
-  const txt = document.getElementById('pq-timer');
-  barra.style.width = '100%';
-  txt.textContent = '20s';
-  timerInterval = setInterval(() => {
+
+  document.getElementById('pq-timer').textContent = '20s';
+
+  timerInterval = setInterval(()=>{
+
     timeLeft--;
-    txt.textContent = timeLeft + 's';
-    barra.style.width = (timeLeft / 20 * 100) + '%';
-    if (timeLeft <= 0) {
+
+    document.getElementById('pq-timer').textContent =
+      timeLeft + 's';
+
+    if(timeLeft <= 0){
+
       clearInterval(timerInterval);
-      document.querySelectorAll('.choice-btn').forEach(b => b.disabled = true);
+
+      document.querySelectorAll('.choice-btn')
+      .forEach(b=>b.disabled=true);
     }
-  }, 1000);
+
+  },1000);
 }
 
-function responder(opcao, btn) {
-  if (respostaSelecionada) return;
-  clearInterval(timerInterval);
-  respostaSelecionada = opcao;
-  const tempo = (Date.now() - inicioResposta) / 1000;
+/* =========================
+   RESPONDER
+========================= */
 
-  document.querySelectorAll('.choice-btn').forEach(b => { b.disabled = true; });
+function responder(opcao, btn){
+
+  if(respostaSelecionada) return;
+
+  tocar(somClick);
+
+  respostaSelecionada = opcao;
+
+  clearInterval(timerInterval);
+
+  const tempo =
+    (Date.now() - inicioResposta) / 1000;
+
+  document.querySelectorAll('.choice-btn')
+  .forEach(b=>b.disabled=true);
+
   btn.classList.add('selecionado');
-  document.getElementById('pq-respondeu').style.display = 'block';
 
   ws.send(JSON.stringify({
-    tipo: 'responder',
-    opcao: opcao,
-    pergunta_id: perguntaId,
-    tempo: tempo,
+    tipo:'responder',
+    opcao:opcao,
+    pergunta_id:perguntaId,
+    tempo:tempo
   }));
 }
 
-function marcarResposta(msg) {
-  if (msg.correta) {
-    document.querySelector('.choice-btn.selecionado')?.classList.replace('selecionado', 'certa');
+function marcarResposta(msg){
+
+  const btn =
+    document.querySelector('.choice-btn.selecionado');
+
+  if(!btn) return;
+
+  if(msg.correta){
+    btn.classList.add('certa');
+    tocar(somAcerto);
+  }else{
+    btn.classList.add('errada');
+    tocar(somErro);
   }
 }
 
-function mostrarRevelacao(msg) {
-  clearInterval(timerInterval);
-  document.getElementById('rv-contador').textContent = `Pergunta ${msg.pergunta.id}`;
-  document.getElementById('rv-texto').textContent = msg.pergunta.texto;
-  document.getElementById('rv-reflexao').textContent = msg.pergunta.reflexao;
+/* =========================
+   REVELAÇÃO
+========================= */
 
-  const total = Object.values(msg.contagem).reduce((a, b) => a + b, 0) || 1;
-  const letras = ['A', 'B', 'C', 'D'];
-  const barras = document.getElementById('rv-barras');
-  barras.innerHTML = msg.pergunta.opcoes.map((o, i) => {
-    const letra = letras[i];
-    const cnt = msg.contagem[letra] || 0;
-    const pct = Math.round(cnt / total * 100);
-    const certa = msg.pergunta.resposta_correta === letra;
-    const minha = respostaSelecionada === letra;
-    const cor = certa ? '#1D9E75' : '#534AB7';
-    return `
-      <div style="margin-bottom:10px;">
-        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px;">
-          <span style="${minha ? 'font-weight:600;' : ''}">${letra}. ${o.texto}${minha ? ' (você)' : ''}${certa && msg.pergunta.resposta_correta ? ' ✓' : ''}</span>
-          <span>${pct}%</span>
-        </div>
-        <div style="height:8px;background:#eee;border-radius:4px;overflow:hidden;">
-          <div style="height:100%;width:${pct}%;background:${cor};border-radius:4px;transition:width 0.5s;"></div>
-        </div>
-      </div>`;
-  }).join('');
+function mostrarRevelacao(msg){
+
+  clearInterval(timerInterval);
+
+  document.getElementById('rv-texto').textContent =
+    msg.pergunta.texto;
 
   mostrarTela('tela-revelacao');
 }
 
-function mostrarFim(placar) {
-  const medals = ['🥇', '🥈', '🥉'];
-  document.getElementById('fim-placar').innerHTML = placar.map((j, i) =>
-    `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:14px;${j.nome === NOME ? 'font-weight:700;color:var(--purple);' : ''}">
-      <span>${medals[i] || (i + 1) + 'º'} ${j.nome}</span>
-      <span>${j.pontos} pts</span>
-    </div>`
-  ).join('');
+/* =========================
+   FIM
+========================= */
+
+function mostrarFim(placar){
+
+  tocar(somFim);
+
+  const el = document.getElementById('fim-placar');
+
+  el.innerHTML = placar.map((j,i)=>`
+    <div>
+      ${i+1}º ${j.nome} - ${j.pontos} pts
+    </div>
+  `).join('');
+
   mostrarTela('tela-fim');
 }
 
-conectar();
+/* =========================
+   START COM DELAY
+========================= */
+
+setTimeout(()=>{
+  conectar();
+}, 1200);
+
 </script>
 {% endblock %}
