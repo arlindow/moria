@@ -1,0 +1,332 @@
+{% extends 'base.html' %}
+{% block title %}Sala {{ sala.codigo }} – Líder{% endblock %}
+
+{% block extra_css %}
+<style>
+  .codigo-box {
+    background: var(--purple-light); border-radius: 16px;
+    padding: 1.5rem; text-align: center; margin-bottom: 1rem;
+  }
+  .codigo-txt {
+    font-size: 42px; font-weight: 700; letter-spacing: 8px;
+    color: var(--purple-dark); line-height: 1;
+  }
+  .player-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 12px; border-radius: 20px;
+    background: var(--teal-light); color: #085041;
+    font-size: 13px; font-weight: 500; margin: 3px;
+  }
+  .pergunta-box {
+    background: var(--card); border: 2px solid var(--purple);
+    border-radius: var(--radius); padding: 1.5rem;
+    display: none;
+  }
+  .barra-resp {
+    height: 10px; border-radius: 5px; background: var(--purple);
+    transition: width 0.5s ease;
+  }
+  #status-badge {
+    display: inline-block; padding: 4px 12px; border-radius: 20px;
+    font-size: 12px; font-weight: 600;
+  }
+  .badge-aguardando { background: var(--amber-light); color: #633806; }
+  .badge-jogo { background: var(--teal-light); color: #085041; }
+  .badge-encerrada { background: #F1EFE8; color: #5F5E5A; }
+  .choice-btn {
+    width: 100%; padding: 14px 16px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg); color: var(--text);
+    font-family: inherit; font-size: 14px;
+    cursor: pointer; text-align: left;
+    margin-bottom: 10px; transition: all 0.15s;
+    display: block;
+  }
+  .choice-btn:hover { border-color: var(--purple); background: var(--purple-light); }
+  .choice-btn.selecionado { border-color: var(--purple); background: var(--purple-light); color: var(--purple-dark); font-weight: 500; }
+  .choice-btn.certa { border-color: var(--teal); background: var(--teal-light); color: #085041; font-weight: 500; }
+  .choice-btn:disabled { cursor: default; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 8px;">
+  <div>
+    <h1 style="font-size: 20px; font-weight: 600;">Painel do Líder</h1>
+    <p class="muted">{{ sala.tema.nome }}</p>
+  </div>
+  <span id="status-badge" class="badge-aguardando">aguardando</span>
+</div>
+
+<div class="grid-2">
+
+  <div>
+    <div class="codigo-box">
+      <p class="muted" style="font-size: 12px; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px;">Código da sala</p>
+      <p class="codigo-txt">{{ sala.codigo }}</p>
+      <p style="font-size: 12px; color: var(--purple); margin-top: 8px;">Mostre na tela ou envie no grupo</p>
+    </div>
+
+    <div class="card" style="margin-bottom: 1rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <p style="font-weight: 600; font-size: 14px;">Participantes</p>
+        <span id="qtd-jogadores" style="font-size: 13px; color: var(--text-muted);">0 conectados</span>
+      </div>
+      <div id="lista-jogadores">
+        <p class="muted" style="font-size: 13px;">Aguardando participantes...</p>
+      </div>
+    </div>
+
+    <button id="btn-iniciar" class="btn btn-primary btn-full" onclick="iniciarJogo()" style="margin-bottom: 8px;" disabled>
+      Iniciar jogo
+    </button>
+    <button id="btn-revelar" class="btn btn-outline btn-full" onclick="revelar()" style="display: none; margin-bottom: 8px;">
+      Revelar respostas agora
+    </button>
+    <button id="btn-proxima" class="btn btn-teal btn-full" onclick="proximaPergunta()" style="display: none; margin-bottom: 8px;">
+      Próxima pergunta →
+    </button>
+  </div>
+
+  <div>
+    <div id="box-espera" class="card" style="text-align: center; padding: 2rem;">
+      <p style="font-size: 32px; margin-bottom: 12px;">✝</p>
+      <p style="font-weight: 500; margin-bottom: 8px;">Sala pronta!</p>
+      <p class="muted">Aguardando participantes entrarem com o código <strong>{{ sala.codigo }}</strong></p>
+    </div>
+
+    <div id="box-pergunta" class="pergunta-box">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <span id="p-contador" class="tag tag-purple"></span>
+        <span id="p-timer" style="font-size: 18px; font-weight: 700; color: var(--purple);"></span>
+      </div>
+      <div style="height: 4px; background: #eee; border-radius: 2px; margin-bottom: 16px; overflow: hidden;">
+        <div id="p-timer-bar" style="height: 100%; background: var(--purple); transition: width 1s linear; width: 100%;"></div>
+      </div>
+      <span id="p-tipo" class="tag tag-coral" style="margin-bottom: 10px; display: inline-block;"></span>
+      <p id="p-texto" style="font-size: 16px; font-weight: 600; line-height: 1.6; margin-bottom: 8px;"></p>
+      <p id="p-versiculo" class="muted" style="font-style: italic; font-size: 13px; margin-bottom: 16px;"></p>
+      <div id="p-opcoes"></div>
+      <div id="p-respondeu" style="display: none; text-align: center; padding: 1rem 0;">
+        <p style="font-size: 15px; font-weight: 500; color: var(--purple);">✓ Resposta enviada!</p>
+        <p class="muted">Aguardando todos responderem...</p>
+      </div>
+      <div id="p-respostas" style="margin-top: 12px; font-size: 13px; color: var(--text-muted);"></div>
+    </div>
+
+    <div id="box-revelacao" class="card" style="display: none;">
+      <p style="font-weight: 600; margin-bottom: 12px;">Resultados</p>
+      <div id="rev-barras"></div>
+      <div id="rev-reflexao" style="margin-top: 12px; padding: 12px; background: var(--teal-light); border-radius: 10px; font-size: 13px; color: #085041; line-height: 1.6;"></div>
+    </div>
+
+    <div id="box-fim" class="card" style="display: none; text-align: center;">
+      <p style="font-size: 22px; margin-bottom: 12px;">🎉</p>
+      <p style="font-weight: 600; font-size: 16px; margin-bottom: 1rem;">Jogo encerrado!</p>
+      <div id="placar-final"></div>
+      <a href="{% url 'jogo_home' %}" class="btn btn-outline" style="margin-top: 1rem;">Criar novo jogo</a>
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CODIGO = "{{ sala.codigo }}";
+const WS_URL = (location.protocol === 'https:' ? 'wss' : 'ws') + '://' + location.host + '/ws/jogo/' + CODIGO + '/';
+
+let ws, timerInterval, timeLeft = 20;
+let perguntaAtual = null, totalPerguntas = 0, indicePergunta = 0;
+let respostaSelecionada = null, perguntaId = null, inicioResposta = 0;
+
+function conectar() {
+  ws = new WebSocket(WS_URL);
+
+  ws.onopen = () => {
+    ws.send(JSON.stringify({ tipo: 'entrar', nome: 'Líder' }));
+    document.getElementById('btn-iniciar').disabled = false;
+  };
+
+  ws.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+    if (msg.tipo === 'jogadores_atualizados') atualizarJogadores(msg.jogadores);
+    else if (msg.tipo === 'nova_pergunta') mostrarPergunta(msg);
+    else if (msg.tipo === 'resposta_confirmada') marcarResposta(msg);
+    else if (msg.tipo === 'revelacao') mostrarRevelacao(msg);
+    else if (msg.tipo === 'fim_de_jogo') mostrarFim(msg.placar);
+    else if (msg.tipo === 'erro') alert('Erro: ' + msg.msg);
+  };
+
+  ws.onclose = () => setTimeout(conectar, 3000);
+}
+
+function atualizarJogadores(jogadores) {
+  const lista = document.getElementById('lista-jogadores');
+  const qtd = document.getElementById('qtd-jogadores');
+  qtd.textContent = jogadores.length + ' conectado' + (jogadores.length !== 1 ? 's' : '');
+  if (!jogadores.length) {
+    lista.innerHTML = '<p class="muted" style="font-size:13px;">Aguardando participantes...</p>';
+    return;
+  }
+  lista.innerHTML = jogadores.map(j =>
+    `<span class="player-chip">${j.nome}${j.pontos ? ' · ' + j.pontos + 'pts' : ''}</span>`
+  ).join('');
+}
+
+function iniciarJogo() {
+  ws.send(JSON.stringify({ tipo: 'iniciar_jogo' }));
+  document.getElementById('btn-iniciar').style.display = 'none';
+  document.getElementById('status-badge').textContent = 'em jogo';
+  document.getElementById('status-badge').className = 'badge-jogo';
+}
+
+function responder(opcao, btn) {
+  if (respostaSelecionada) return;
+  respostaSelecionada = opcao;
+  const tempo = (Date.now() - inicioResposta) / 1000;
+
+  document.querySelectorAll('.choice-btn').forEach(b => { b.disabled = true; });
+  btn.classList.add('selecionado');
+  document.getElementById('p-respondeu').style.display = 'block';
+
+  ws.send(JSON.stringify({
+    tipo: 'responder',
+    opcao: opcao,
+    pergunta_id: perguntaId,
+    tempo: tempo,
+  }));
+}
+
+function marcarResposta(msg) {
+  if (msg.correta) {
+    document.querySelector('.choice-btn.selecionado')?.classList.replace('selecionado', 'certa');
+  }
+}
+
+function mostrarPergunta(msg) {
+  perguntaAtual = msg.pergunta;
+  indicePergunta = msg.indice;
+  totalPerguntas = msg.total;
+  respostaSelecionada = null;
+  perguntaId = msg.pergunta.id;
+  inicioResposta = Date.now();
+
+  document.getElementById('box-espera').style.display = 'none';
+  document.getElementById('box-revelacao').style.display = 'none';
+  document.getElementById('box-fim').style.display = 'none';
+  document.getElementById('box-pergunta').style.display = 'block';
+  document.getElementById('btn-revelar').style.display = 'inline-flex';
+  document.getElementById('btn-proxima').style.display = 'none';
+
+  document.getElementById('p-contador').textContent = `Pergunta ${msg.indice + 1} de ${msg.total}`;
+  document.getElementById('p-tipo').textContent = msg.pergunta.tipo;
+  document.getElementById('p-texto').textContent = msg.pergunta.texto;
+  document.getElementById('p-versiculo').textContent = msg.pergunta.versiculo ? '📖 ' + msg.pergunta.versiculo : '';
+  document.getElementById('p-respostas').textContent = 'Aguardando respostas...';
+  document.getElementById('p-respondeu').style.display = 'none';
+
+  const opcoes = document.getElementById('p-opcoes');
+  opcoes.innerHTML = '';
+  msg.pergunta.opcoes.forEach(o => {
+    const btn = document.createElement('button');
+    btn.className = 'choice-btn';
+    btn.innerHTML = `<strong>${o.letra}.</strong> ${o.texto}`;
+    btn.onclick = () => responder(o.letra, btn);
+    opcoes.appendChild(btn);
+  });
+
+  iniciarTimer();
+}
+
+function iniciarTimer() {
+  clearInterval(timerInterval);
+  timeLeft = 20;
+  const bar = document.getElementById('p-timer-bar');
+  const txt = document.getElementById('p-timer');
+  bar.style.width = '100%';
+  timerInterval = setInterval(() => {
+    timeLeft--;
+    txt.textContent = timeLeft + 's';
+    bar.style.width = (timeLeft / 20 * 100) + '%';
+    if (timeLeft <= 0) {
+      clearInterval(timerInterval);
+      document.querySelectorAll('.choice-btn').forEach(b => b.disabled = true);
+      revelar();
+    }
+  }, 1000);
+}
+
+function revelar() {
+  clearInterval(timerInterval);
+  ws.send(JSON.stringify({ tipo: 'revelar' }));
+  document.getElementById('btn-revelar').style.display = 'none';
+}
+
+function mostrarRevelacao(msg) {
+  document.getElementById('box-pergunta').style.display = 'none';
+  document.getElementById('box-revelacao').style.display = 'block';
+  document.getElementById('btn-proxima').style.display = 'inline-flex';
+  document.getElementById('btn-revelar').style.display = 'none';
+
+  const total = Object.values(msg.contagem).reduce((a, b) => a + b, 0) || 1;
+  const cores = { A: '#534AB7', B: '#1D9E75', C: '#D85A30', E: '#BA7517' };
+  const letras = ['A', 'B', 'C', 'D'];
+
+  const barras = document.getElementById('rev-barras');
+  barras.innerHTML = msg.pergunta.opcoes.map((o, i) => {
+    const letra = letras[i];
+    const cnt = msg.contagem[letra] || 0;
+    const pct = Math.round(cnt / total * 100);
+    const cor = msg.pergunta.resposta_correta === letra ? '#1D9E75' : '#534AB7';
+    const minha = respostaSelecionada === letra;
+    return `
+      <div style="margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;">
+          <span style="${minha ? 'font-weight:600;' : ''}">${letra}. ${o.texto}${minha ? ' (você)' : ''}${msg.pergunta.resposta_correta === letra ? ' ✓' : ''}</span>
+          <span>${pct}%</span>
+        </div>
+        <div style="height:10px;background:#eee;border-radius:5px;overflow:hidden;">
+          <div class="barra-resp" style="width:${pct}%;background:${cor};"></div>
+        </div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('rev-reflexao').innerHTML = '🙏 ' + msg.pergunta.reflexao;
+  document.getElementById('btn-proxima').textContent =
+    indicePergunta + 1 >= totalPerguntas ? 'Encerrar jogo' : 'Próxima pergunta →';
+}
+
+function proximaPergunta() {
+  ws.send(JSON.stringify({ tipo: 'proxima_pergunta' }));
+  document.getElementById('btn-proxima').style.display = 'none';
+}
+
+function mostrarFim(placar) {
+  document.getElementById('box-pergunta').style.display = 'none';
+  document.getElementById('box-revelacao').style.display = 'none';
+  document.getElementById('box-fim').style.display = 'block';
+  document.getElementById('btn-proxima').style.display = 'none';
+  document.getElementById('status-badge').textContent = 'encerrado';
+  document.getElementById('status-badge').className = 'badge-encerrada';
+
+  // Esconder o status após 5 segundos
+  setTimeout(() => {
+    document.getElementById('status-badge').style.display = 'none';
+  }, 5000);
+
+  const medals = ['🥇', '🥈', '🥉'];
+  document.getElementById('placar-final').innerHTML = placar.map((j, i) =>
+    `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:14px;">
+      <span>${medals[i] || (i + 1) + 'º'} ${j.nome}</span>
+      <span style="font-weight:600;">${j.pontos} pts</span>
+    </div>`
+  ).join('');
+}
+
+conectar();
+</script>
+{% endblock %}

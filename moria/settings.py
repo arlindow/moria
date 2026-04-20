@@ -1,30 +1,37 @@
-import os
 from pathlib import Path
+from decouple import config
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Substitua sua linha SECRET_KEY por esta:
-SECRET_KEY = os.environ.get('SECRET_KEY', 'chave-padrao-apenas-para-desenvolvimento-local')
+SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-me-in-production')
+DEBUG = config('DEBUG', default=True, cast=bool)
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='*').split(',')
 
-DEBUG = False
-
-# Substitua sua linha ALLOWED_HOSTS por esta:
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
-
-RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
-if RENDER_EXTERNAL_HOSTNAME:
-    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
+LOGIN_URL = '/accounts/login/'
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/accounts/login/'
 
 INSTALLED_APPS = [
+    'daphne',
+    'django.contrib.admin',
+    'django.contrib.auth',
     'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
     'django.contrib.staticfiles',
-    'versiculos',
+    'channels',
+    'celula',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
 ROOT_URLCONF = 'moria.urls'
@@ -32,28 +39,100 @@ ROOT_URLCONF = 'moria.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
+                'django.template.context_processors.debug',
                 'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
             ],
         },
     },
 ]
 
 WSGI_APPLICATION = 'moria.wsgi.application'
+ASGI_APPLICATION = 'moria.asgi.application'
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+# Database
+DATABASE_URL = config('DATABASE_URL', default='')
+if DATABASE_URL:
+    import dj_database_url
+    DATABASES = {'default': dj_database_url.parse(DATABASE_URL)}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
     }
-}
+
+# Channels / Redis
+REDIS_URL = config('REDIS_URL', default='')
+if REDIS_URL:
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels_redis.core.RedisChannelLayer',
+            'CONFIG': {'hosts': [REDIS_URL]},
+        }
+    }
+else:
+    # Para desenvolvimento local sem Redis
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels.layers.InMemoryChannelLayer',
+        }
+    }
+
+AUTH_PASSWORD_VALIDATORS = [
+    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
+]
+
+LANGUAGE_CODE = 'pt-br'
+TIME_ZONE = 'America/Sao_Paulo'
+USE_I18N = True
+USE_TZ = True
 
 STATIC_URL = '/static/'
-STATICFILES_DIRS = [os.path.join(BASE_DIR, 'versiculos/static')]
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_DIRS = [BASE_DIR / 'static']
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# HTTPS reverse-proxy support + CSRF trusted origins
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+
+# Ajuste definitivo para GitHub Codespaces (HTTPS) e Local
+_csrf_trusted_origins = config(
+    'CSRF_TRUSTED_ORIGINS',
+    default='https://*.onrender.com,https://*.app.github.dev,https://*.github.dev'
+)
+
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in _csrf_trusted_origins.split(',')
+    if origin.strip()
+]
+
+# O Codespaces muitas vezes exige o protocolo HTTPS explicitamente para o localhost
+LOCAL_ORIGINS = [
+    'http://localhost:8000',
+    'https://localhost:8000',  # <-- Adicione esta linha (HTTPS)
+    'http://127.0.0.1:8000',
+    'https://127.0.0.1:8000',
+]
+
+CSRF_TRUSTED_ORIGINS.extend(LOCAL_ORIGINS)
+
+# Como você está no Codespaces, adicione também o seu domínio dinâmico atual
+# para garantir que o proxy do GitHub não seja barrado
+CSRF_TRUSTED_ORIGINS.append('https://ubiquitous-goggles-gj5wxqqp55rh9rpr-8000.app.github.dev')

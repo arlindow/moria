@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+{% block title %}Jogo – Célula Moriá{% endblock %}
+
+{% block extra_css %}
+<style>
+  .jogo-hero {
+    background: linear-gradient(135deg, #534AB7 0%, #3C3489 100%);
+    border-radius: 20px; padding: 2.5rem 2rem;
+    text-align: center; margin-bottom: 2rem; color: #fff;
+  }
+  .tema-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 1.25rem;
+    cursor: pointer; transition: all 0.2s;
+    text-decoration: none; color: inherit; display: block;
+  }
+  .tema-card:hover { border-color: var(--purple); transform: translateY(-2px); }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="jogo-hero">
+  <p style="font-size: 36px; margin-bottom: 12px;">🎮</p>
+  <h1 style="font-size: 22px; font-weight: 600; margin-bottom: 8px;">Enfrenta o Medo</h1>
+  <p style="color: rgba(255,255,255,0.75); font-size: 14px;">Dinâmica interativa para jogar em grupo no celular</p>
+</div>
+
+<div class="grid-2" style="margin-bottom: 2rem;">
+
+  <!-- Criar sala (líder) -->
+  <div class="card">
+    <p style="font-weight: 600; font-size: 16px; margin-bottom: 6px;">Sou o líder</p>
+    <p class="muted" style="margin-bottom: 1.25rem;">Crie uma sala e compartilhe o código com o grupo</p>
+      {% if is_lider %}
+        {% if temas %}
+        <form method="post" action="{% url 'jogo_criar' %}">
+          {% csrf_token %}
+          <div class="form-group">
+            <label>Tema da reunião</label>
+            <select name="tema_id">
+              {% for t in temas %}
+              <option value="{{ t.id }}">{{ t.nome }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary btn-full">Criar sala</button>
+        </form>
+        {% else %}
+        <div style="padding: 12px; background: var(--amber-light); border-radius: 10px; font-size: 13px; color: #633806;">
+          Nenhum tema cadastrado. Acesse o <a href="/admin/celula/temapergunta/add/" style="color: var(--amber);">painel admin</a> para criar perguntas.
+        </div>
+        {% endif %}
+      {% else %}
+        <div style="padding: 12px; background: var(--purple-light); border-radius: 10px; font-size: 13px; color: #3C3489;">
+          Você não tem permissão para criar salas. Peça a um líder para iniciar o jogo.
+        </div>
+      {% endif %}
+    </div>
+
+  <div class="card">
+    <p style="font-weight: 600; font-size: 16px; margin-bottom: 6px;">Sou participante</p>
+    <p class="muted" style="margin-bottom: 1.25rem;">Entre com o código que o líder compartilhou</p>
+    <form method="post" action="{% url 'jogo_entrar' %}">
+      {% csrf_token %}
+      <div class="form-group">
+        <label>Seu nome</label>
+        <input type="text" name="nome" required placeholder="Como quer ser chamado?" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label>Código da sala</label>
+        <input type="text" name="codigo" required placeholder="Ex: MORIA1"
+               style="text-transform: uppercase; letter-spacing: 3px; font-size: 18px; font-weight: 600;"
+               maxlength="6" autocomplete="off">
+      </div>
+      <button type="submit" class="btn btn-teal btn-full">Entrar na sala</button>
+    </form>
+  </div>
+
+</div>
+
+<!-- Como funciona -->
+<div class="card" style="background: var(--purple-light); border-color: #AFA9EC;">
+  <p style="font-weight: 600; margin-bottom: 1rem; color: var(--purple-dark);">Como funciona</p>
+  <div class="grid-3">
+    <div style="text-align: center;">
+      <p style="font-size: 24px; margin-bottom: 8px;">📲</p>
+      <p style="font-size: 13px; font-weight: 500; margin-bottom: 4px;">1. Líder cria a sala</p>
+      <p class="muted">Escolhe o tema e gera o código</p>
+    </div>
+    <div style="text-align: center;">
+      <p style="font-size: 24px; margin-bottom: 8px;">👥</p>
+      <p style="font-size: 13px; font-weight: 500; margin-bottom: 4px;">2. Todos entram</p>
+      <p class="muted">Digita o código no celular</p>
+    </div>
+    <div style="text-align: center;">
+      <p style="font-size: 24px; margin-bottom: 8px;">🙏</p>
+      <p style="font-size: 13px; font-weight: 500; margin-bottom: 4px;">3. Jogam juntos</p>
+      <p class="muted">Perguntas, reflexão e oração</p>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
