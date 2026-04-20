@@ -1,29 +1,29 @@
 from pathlib import Path
 from decouple import config
+import os
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-<<<<<<< HEAD
-# Substitua sua linha SECRET_KEY por esta:
-SECRET_KEY = os.environ.get('SECRET_KEY', 'chave-padrao-apenas-para-desenvolvimento-local')
+# Segurança
+SECRET_KEY = config(
+    'SECRET_KEY',
+    default='django-insecure-change-me-in-production'
+)
 
-DEBUG = False
+DEBUG = config('DEBUG', default=False, cast=bool)
 
-# Substitua sua linha ALLOWED_HOSTS por esta:
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+ALLOWED_HOSTS = config(
+    'ALLOWED_HOSTS',
+    default='localhost,127.0.0.1,.onrender.com'
+).split(',')
 
 RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
-if RENDER_EXTERNAL_HOSTNAME:
+if RENDER_EXTERNAL_HOSTNAME and RENDER_EXTERNAL_HOSTNAME not in ALLOWED_HOSTS:
     ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
-=======
-SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-me-in-production')
-DEBUG = config('DEBUG', default=True, cast=bool)
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='*').split(',')
 
 LOGIN_URL = '/accounts/login/'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/accounts/login/'
->>>>>>> develop
 
 INSTALLED_APPS = [
     'daphne',
@@ -71,9 +71,12 @@ ASGI_APPLICATION = 'moria.asgi.application'
 
 # Database
 DATABASE_URL = config('DATABASE_URL', default='')
+
 if DATABASE_URL:
     import dj_database_url
-    DATABASES = {'default': dj_database_url.parse(DATABASE_URL)}
+    DATABASES = {
+        'default': dj_database_url.parse(DATABASE_URL)
+    }
 else:
     DATABASES = {
         'default': {
@@ -84,19 +87,21 @@ else:
 
 # Channels / Redis
 REDIS_URL = config('REDIS_URL', default='')
+
 if REDIS_URL:
     CHANNEL_LAYERS = {
         'default': {
             'BACKEND': 'channels_redis.core.RedisChannelLayer',
-            'CONFIG': {'hosts': [REDIS_URL]},
-        }
+            'CONFIG': {
+                'hosts': [REDIS_URL],
+            },
+        },
     }
 else:
-    # Para desenvolvimento local sem Redis
     CHANNEL_LAYERS = {
         'default': {
             'BACKEND': 'channels.layers.InMemoryChannelLayer',
-        }
+        },
     }
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -121,11 +126,11 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# HTTPS reverse-proxy support + CSRF trusted origins
+# Proxy / HTTPS
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 USE_X_FORWARDED_HOST = True
 
-# Ajuste definitivo para GitHub Codespaces (HTTPS) e Local
+# CSRF Trusted Origins
 _csrf_trusted_origins = config(
     'CSRF_TRUSTED_ORIGINS',
     default='https://*.onrender.com,https://*.app.github.dev,https://*.github.dev'
@@ -137,16 +142,15 @@ CSRF_TRUSTED_ORIGINS = [
     if origin.strip()
 ]
 
-# O Codespaces muitas vezes exige o protocolo HTTPS explicitamente para o localhost
 LOCAL_ORIGINS = [
     'http://localhost:8000',
-    'https://localhost:8000',  # <-- Adicione esta linha (HTTPS)
+    'https://localhost:8000',
     'http://127.0.0.1:8000',
     'https://127.0.0.1:8000',
 ]
 
 CSRF_TRUSTED_ORIGINS.extend(LOCAL_ORIGINS)
 
-# Como você está no Codespaces, adicione também o seu domínio dinâmico atual
-# para garantir que o proxy do GitHub não seja barrado
-CSRF_TRUSTED_ORIGINS.append('https://ubiquitous-goggles-gj5wxqqp55rh9rpr-8000.app.github.dev')
+CSRF_TRUSTED_ORIGINS.append(
+    'https://ubiquitous-goggles-gj5wxqqp55rh9rpr-8000.app.github.dev'
+)
