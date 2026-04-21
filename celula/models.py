@@ -204,6 +204,7 @@ class Jogador(models.Model):
     nome = models.CharField(max_length=100, verbose_name='Nome')
     pontos = models.IntegerField(default=0, verbose_name='Pontos')
     channel_name = models.CharField(max_length=200, blank=True)
+    is_lider = models.BooleanField(default=False)
     conectado = models.BooleanField(default=True)
     entrou_em = models.DateTimeField(auto_now_add=True)
 
@@ -234,4 +235,3 @@ class Resposta(models.Model):
         unique_together = ['jogador', 'pergunta']
         verbose_name = 'Resposta'
         verbose_name_plural = 'Respostas'
-        

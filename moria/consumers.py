@@ -1,7 +1,6 @@
 import json
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
-from django.utils import timezone
 
 
 class JogoConsumer(AsyncWebsocketConsumer):
@@ -9,6 +8,7 @@ class JogoConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         self.codigo_sala = self.scope['url_route']['kwargs']['codigo_sala']
         self.room_group = f'jogo_{self.codigo_sala}'
+        self.is_lider = False
         await self.channel_layer.group_add(self.room_group, self.channel_name)
         await self.accept()
 
@@ -38,7 +38,11 @@ class JogoConsumer(AsyncWebsocketConsumer):
 
     async def handle_entrar(self, data):
         nome = data.get('nome', 'Anônimo')[:100]
-        jogador = await self.criar_jogador(nome)
+        role = data.get('role', 'jogador')   # 'lider' ou 'jogador'
+
+        self.is_lider = (role == 'lider')
+
+        jogador = await self.criar_jogador(nome, self.is_lider)
         self.jogador_id = jogador['id']
 
         await self.send(json.dumps({
@@ -56,7 +60,10 @@ class JogoConsumer(AsyncWebsocketConsumer):
 
         perguntas = await self.get_perguntas()
         if not perguntas:
-            await self.send(json.dumps({'tipo': 'erro', 'msg': 'Nenhuma pergunta cadastrada para este tema.'}))
+            await self.send(json.dumps({
+                'tipo': 'erro',
+                'msg': 'Nenhuma pergunta cadastrada para este tema.',
+            }))
             return
 
         await self.set_sala_status('em_jogo')
@@ -80,12 +87,15 @@ class JogoConsumer(AsyncWebsocketConsumer):
             'pontos_ganhos': resultado['pontos'],
         }))
 
-        todos = await self.todos_responderam(pergunta_id)
-        if todos:
-            await self.channel_layer.group_send(self.room_group, {
-                'type': 'revelar_resultado',
-                'pergunta_id': pergunta_id,
-            })
+        # Líder responde mas não dispara revelação automática —
+        # ele controla o ritmo pelo botão "Revelar"
+        if not self.is_lider:
+            todos = await self.todos_responderam(pergunta_id)
+            if todos:
+                await self.channel_layer.group_send(self.room_group, {
+                    'type': 'revelar_resultado',
+                    'pergunta_id': pergunta_id,
+                })
 
     async def handle_proxima_pergunta(self):
         sala = await self.get_sala()
@@ -107,7 +117,6 @@ class JogoConsumer(AsyncWebsocketConsumer):
             })
 
     async def handle_revelar(self):
-        sala = await self.get_sala()
         await self.channel_layer.group_send(self.room_group, {
             'type': 'revelar_resultado',
             'pergunta_id': await self.get_pergunta_id_atual(),
@@ -151,15 +160,20 @@ class JogoConsumer(AsyncWebsocketConsumer):
     # ── DB helpers ────────────────────────────────────────────────────────────
 
     @database_sync_to_async
-    def criar_jogador(self, nome):
+    def criar_jogador(self, nome, is_lider=False):
         from celula.models import SalaJogo, Jogador
         sala = SalaJogo.objects.get(codigo=self.codigo_sala)
         jogador, _ = Jogador.objects.get_or_create(
             sala=sala, nome=nome,
-            defaults={'channel_name': self.channel_name, 'conectado': True}
+            defaults={
+                'channel_name': self.channel_name,
+                'conectado': True,
+                'is_lider': is_lider,
+            }
         )
         jogador.channel_name = self.channel_name
         jogador.conectado = True
+        jogador.is_lider = is_lider
         jogador.save()
         return {'id': jogador.id, 'nome': jogador.nome, 'pontos': jogador.pontos}
 
@@ -211,6 +225,7 @@ class JogoConsumer(AsyncWebsocketConsumer):
         sala = SalaJogo.objects.get(codigo=self.codigo_sala)
         return [
             {'id': j.id, 'nome': j.nome, 'pontos': j.pontos, 'conectado': j.conectado}
+            # líder aparece na lista mas não no placar final
             for j in sala.jogadores.filter(conectado=True)
         ]
 
@@ -222,7 +237,8 @@ class JogoConsumer(AsyncWebsocketConsumer):
 
         correta = (pergunta.resposta_correta == opcao and pergunta.resposta_correta != '')
         pontos = 0
-        if correta:
+        # Líder não acumula pontos (não afeta o ranking dos participantes)
+        if correta and not jogador.is_lider:
             pontos = max(100, int(1000 - (tempo * 40)))
 
         Resposta.objects.update_or_create(
@@ -239,9 +255,14 @@ class JogoConsumer(AsyncWebsocketConsumer):
     def todos_responderam(self, pergunta_id):
         from celula.models import SalaJogo, Resposta
         sala = SalaJogo.objects.get(codigo=self.codigo_sala)
-        total_jogadores = sala.jogadores.filter(conectado=True).count()
+        # Conta apenas jogadores que NÃO são líderes
+        total_jogadores = sala.jogadores.filter(conectado=True, is_lider=False).count()
+        if total_jogadores == 0:
+            return False
         total_respostas = Resposta.objects.filter(
-            pergunta_id=pergunta_id, jogador__sala=sala
+            pergunta_id=pergunta_id,
+            jogador__sala=sala,
+            jogador__is_lider=False,
         ).count()
         return total_respostas >= total_jogadores
 
@@ -250,6 +271,7 @@ class JogoConsumer(AsyncWebsocketConsumer):
         from celula.models import Pergunta, Resposta, SalaJogo
         sala = SalaJogo.objects.get(codigo=self.codigo_sala)
         pergunta = Pergunta.objects.get(id=pergunta_id)
+        # Contagem inclui todos (líder + jogadores) para mostrar no gráfico
         respostas = Resposta.objects.filter(pergunta=pergunta, jogador__sala=sala)
 
         contagem = {'A': 0, 'B': 0, 'C': 0, 'D': 0}
@@ -267,9 +289,8 @@ class JogoConsumer(AsyncWebsocketConsumer):
     def get_placar(self):
         from celula.models import SalaJogo
         sala = SalaJogo.objects.get(codigo=self.codigo_sala)
+        # Placar final exclui o líder
         return [
             {'nome': j.nome, 'pontos': j.pontos}
-            for j in sala.jogadores.order_by('-pontos')
+            for j in sala.jogadores.filter(is_lider=False).order_by('-pontos')
         ]
-
-        

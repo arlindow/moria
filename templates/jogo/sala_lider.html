@@ -121,21 +121,38 @@
 const CODIGO = "{{ sala.codigo }}";
 const WS_URL = (location.protocol === 'https:' ? 'wss' : 'ws') + '://' + location.host + '/ws/jogo/' + CODIGO + '/';
 
+
+// ── Sons ──────────────────────────────────────────────────────────────────────
+const SOM = {};
+['click','acerto','erro','fim','entrar','iniciar','contagem','revelacao','vencedor','ambiente']
+  .forEach(n => { SOM[n] = new Audio('/static/sounds/' + n + '.mp3'); });
+SOM.ambiente.loop = true;
+SOM.ambiente.volume = 0.15;
+
+function tocar(nome, volume=0.7) {
+  const a = SOM[nome];
+  if (!a) return;
+  a.volume = volume;
+  a.currentTime = 0;
+  a.play().catch(() => {});
+}
 let ws, timerInterval, timeLeft = 20;
 let perguntaAtual = null, totalPerguntas = 0, indicePergunta = 0;
+let respostaSelecionada = null, perguntaId = null, inicioResposta = 0;
 
 function conectar() {
   ws = new WebSocket(WS_URL);
 
   ws.onopen = () => {
-    ws.send(JSON.stringify({ tipo: 'entrar', nome: 'Líder' }));
+    ws.send(JSON.stringify({ tipo: 'entrar', nome: 'Líder', role: 'lider' }));
     document.getElementById('btn-iniciar').disabled = false;
   };
 
   ws.onmessage = (e) => {
     const msg = JSON.parse(e.data);
-    if (msg.tipo === 'jogadores_atualizados') atualizarJogadores(msg.jogadores);
+    if (msg.tipo === 'jogadores_atualizados') { tocar('entrar', 0.4); atualizarJogadores(msg.jogadores); }
     else if (msg.tipo === 'nova_pergunta') mostrarPergunta(msg);
+    else if (msg.tipo === 'resposta_confirmada') marcarResposta(msg);
     else if (msg.tipo === 'revelacao') mostrarRevelacao(msg);
     else if (msg.tipo === 'fim_de_jogo') mostrarFim(msg.placar);
     else if (msg.tipo === 'erro') alert('Erro: ' + msg.msg);
@@ -158,6 +175,7 @@ function atualizarJogadores(jogadores) {
 }
 
 function iniciarJogo() {
+  tocar('iniciar', 0.65);
   ws.send(JSON.stringify({ tipo: 'iniciar_jogo' }));
   document.getElementById('btn-iniciar').style.display = 'none';
   document.getElementById('status-badge').textContent = 'em jogo';
@@ -181,15 +199,51 @@ function mostrarPergunta(msg) {
   document.getElementById('p-texto').textContent = msg.pergunta.texto;
   document.getElementById('p-versiculo').textContent = msg.pergunta.versiculo ? '📖 ' + msg.pergunta.versiculo : '';
   document.getElementById('p-respostas').textContent = 'Aguardando respostas...';
+  document.getElementById('p-respondeu').style.display = 'none';
+
+  respostaSelecionada = null;
+  perguntaId = msg.pergunta.id;
+  inicioResposta = Date.now();
+  if (msg.indice > 0) tocar('contagem', 0.4);
 
   const opcoes = document.getElementById('p-opcoes');
-  opcoes.innerHTML = msg.pergunta.opcoes.map(o =>
-    `<div style="padding:8px 12px;background:var(--bg);border-radius:8px;margin-bottom:6px;font-size:13px;">
-      <strong>${o.letra}.</strong> ${o.texto}
-    </div>`
-  ).join('');
+  opcoes.innerHTML = '';
+  msg.pergunta.opcoes.forEach(o => {
+    const btn = document.createElement('button');
+    btn.className = 'choice-btn';
+    btn.innerHTML = `<strong>${o.letra}.</strong> ${o.texto}`;
+    btn.onclick = () => responder(o.letra, btn);
+    opcoes.appendChild(btn);
+  });
 
   iniciarTimer();
+}
+
+function responder(opcao, btn) {
+  if (respostaSelecionada) return;
+  tocar('click');
+  respostaSelecionada = opcao;
+  const tempo = (Date.now() - inicioResposta) / 1000;
+
+  document.querySelectorAll('.choice-btn').forEach(b => { b.disabled = true; });
+  btn.classList.add('selecionado');
+  document.getElementById('p-respondeu').style.display = 'block';
+
+  ws.send(JSON.stringify({
+    tipo: 'responder',
+    opcao: opcao,
+    pergunta_id: perguntaId,
+    tempo: tempo,
+  }));
+}
+
+function marcarResposta(msg) {
+  if (msg.correta) {
+    document.querySelector('.choice-btn.selecionado')?.classList.replace('selecionado', 'certa');
+    tocar('acerto', 0.5);
+  } else if (respostaSelecionada) {
+    tocar('erro', 0.4);
+  }
 }
 
 function iniciarTimer() {
@@ -213,6 +267,7 @@ function revelar() {
 }
 
 function mostrarRevelacao(msg) {
+  tocar('revelacao', 0.6);
   document.getElementById('box-pergunta').style.display = 'none';
   document.getElementById('box-revelacao').style.display = 'block';
   document.getElementById('btn-proxima').style.display = 'inline-flex';
@@ -251,6 +306,8 @@ function proximaPergunta() {
 }
 
 function mostrarFim(placar) {
+  SOM.ambiente.pause();
+  setTimeout(() => tocar('vencedor', 0.75), 400);
   document.getElementById('box-pergunta').style.display = 'none';
   document.getElementById('box-revelacao').style.display = 'none';
   document.getElementById('box-fim').style.display = 'block';
