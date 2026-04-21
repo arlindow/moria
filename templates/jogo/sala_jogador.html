@@ -121,6 +121,21 @@ const CODIGO = "{{ sala.codigo }}";
 const NOME = "{{ nome_jogador|escapejs }}";
 const WS_URL = (location.protocol === 'https:' ? 'wss' : 'ws') + '://' + location.host + '/ws/jogo/' + CODIGO + '/';
 
+// ── Sons ──────────────────────────────────────────────────────────────────────
+const SOM = {};
+['click','acerto','erro','fim','entrar','iniciar','contagem','revelacao','vencedor','ambiente']
+  .forEach(n => { SOM[n] = new Audio('/static/sounds/' + n + '.mp3'); });
+SOM.ambiente.loop = true;
+SOM.ambiente.volume = 0.18;
+
+function tocar(nome, volume=0.7) {
+  const a = SOM[nome];
+  if (!a) return;
+  a.volume = volume;
+  a.currentTime = 0;
+  a.play().catch(() => {});
+}
+
 let ws, timerInterval, timeLeft = 20;
 let respostaSelecionada = null, perguntaId = null, inicioResposta = 0;
 
@@ -139,7 +154,7 @@ function conectar() {
 
   ws.onmessage = (e) => {
     const msg = JSON.parse(e.data);
-    if (msg.tipo === 'entrou') return;
+    if (msg.tipo === 'entrou') { tocar('entrar'); SOM.ambiente.play().catch(()=>{}); return; }
     if (msg.tipo === 'jogadores_atualizados') atualizarJogadores(msg.jogadores);
     else if (msg.tipo === 'nova_pergunta') mostrarPergunta(msg);
     else if (msg.tipo === 'resposta_confirmada') marcarResposta(msg);
@@ -177,6 +192,7 @@ function mostrarPergunta(msg) {
     opcoes.appendChild(btn);
   });
 
+  if (msg.indice === 0) tocar('iniciar', 0.6); else tocar('contagem', 0.5);
   iniciarTimer();
   mostrarTela('tela-pergunta');
 }
@@ -192,6 +208,7 @@ function iniciarTimer() {
     timeLeft--;
     txt.textContent = timeLeft + 's';
     barra.style.width = (timeLeft / 20 * 100) + '%';
+    if (timeLeft > 0 && timeLeft <= 3) tocar('contagem', 0.35);
     if (timeLeft <= 0) {
       clearInterval(timerInterval);
       document.querySelectorAll('.choice-btn').forEach(b => b.disabled = true);
@@ -201,6 +218,7 @@ function iniciarTimer() {
 
 function responder(opcao, btn) {
   if (respostaSelecionada) return;
+  tocar('click');
   clearInterval(timerInterval);
   respostaSelecionada = opcao;
   const tempo = (Date.now() - inicioResposta) / 1000;
@@ -220,11 +238,15 @@ function responder(opcao, btn) {
 function marcarResposta(msg) {
   if (msg.correta) {
     document.querySelector('.choice-btn.selecionado')?.classList.replace('selecionado', 'certa');
+    tocar('acerto');
+  } else if (respostaSelecionada) {
+    tocar('erro', 0.5);
   }
 }
 
 function mostrarRevelacao(msg) {
   clearInterval(timerInterval);
+  tocar('revelacao', 0.55);
 
   document.getElementById('rv-contador').textContent =
     `Pergunta ${msg.pergunta.id}`;
@@ -257,6 +279,9 @@ function mostrarRevelacao(msg) {
 }
 
 function mostrarFim(placar) {
+  SOM.ambiente.pause();
+  const isVencedor = placar.length > 0 && placar[0].nome === NOME;
+  setTimeout(() => tocar(isVencedor ? 'vencedor' : 'fim', 0.75), 400);
   const medals = ['🥇', '🥈', '🥉'];
   document.getElementById('fim-placar').innerHTML = placar.map((j, i) =>
     `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:14px;${j.nome === NOME ? 'font-weight:700;color:var(--purple);' : ''}">
