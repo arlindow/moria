@@ -33,7 +33,7 @@ PERGUNTAS_DESANIMO = [
         'tipo': 'quiz',
         'texto': 'Segundo Mateus 11:28-30, quem Jesus convida para receber descanso?',
         'versiculo': 'Mateus 11:28-30',
-        'reflexao': 'Jesus não exige perfeição para receber alguém. Ele chama os cansados e sobrecarregados.',
+        'reflexao': 'Jesus não exige perfeição parComo seu projeto Moriá roda em Django com Channels, certifique-se de que o seu consumers.py está enviando o booleano correta dentro do dicionário msg no evento resposta_confirmada.a receber alguém. Ele chama os cansados e sobrecarregados.',
         'opcao_a': 'Somente os fortes',
         'opcao_b': 'Somente os líderes',
         'opcao_c': 'Os ricos e poderosos',

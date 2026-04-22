@@ -8,6 +8,7 @@ python manage.py migrate --noinput
 # Popular perguntas
 python manage.py popular_perguntas
 python manage.py popular_desanimo
+python manage.py popular_reuniao
 
 # Criar usuários de teste
 python manage.py populate_usuarios
