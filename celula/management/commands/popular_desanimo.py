@@ -10,7 +10,7 @@ PERGUNTAS_DESANIMO = [
     {
         'tipo': 'quiz',
         'texto': 'Qual versículo desta lição traz a ordem: "Sê forte e corajoso; não temas"?',
-        'versiculo': 'Josué 1:9',
+        'versiculo': '',
         'reflexao': 'A coragem bíblica não nasce da ausência de medo, mas da certeza da presença de Deus conosco.',
         'opcao_a': 'Mateus 11:28',
         'opcao_b': 'Jeremias 20:9',
@@ -45,15 +45,15 @@ PERGUNTAS_DESANIMO = [
     # REFLEXÃO (3)
     # =========================
     {
-        'tipo': 'reflexao',
-        'texto': 'Em qual área da sua vida você sente que perdeu o ânimo recentemente?',
-        'versiculo': '',
-        'reflexao': 'Reconhecer o desânimo não é fraqueza. É o primeiro passo para receber renovação de Deus.',
-        'opcao_a': 'Vida espiritual',
-        'opcao_b': 'Família / relacionamentos',
-        'opcao_c': 'Trabalho / estudos',
-        'opcao_d': 'Sonhos pessoais',
-        'resposta_correta': '',
+    'tipo': 'reflexao',
+    'texto': 'Às vezes o desânimo bate à porta. Como você prefere lidar com esse sentimento hoje?',
+    'versiculo': 'Salmos 42:11 — "Por que você está assim tão triste, ó minha alma? Por que está assim tão perturbada dentro de mim? Ponha a sua esperança em Deus."',
+    'reflexao': 'Não há problema em não estar bem. O importante é saber que você não precisa carregar esse fardo sozinho.',
+    'opcao_a': 'Quero identificar o que me desanima',
+    'opcao_b': 'Prefiro apenas silenciar e descansar',
+    'opcao_c': 'Gostaria de uma palavra de encorajamento',
+    'opcao_d': 'Prefiro guardar para mim agora',
+    'resposta_correta': 'TODAS',
     },
     {
         'tipo': 'reflexao',
@@ -106,7 +106,7 @@ PERGUNTAS_DESANIMO = [
     {
         'tipo': 'desafio',
         'texto': 'Qual versículo você vai carregar no coração esta semana?',
-        'versiculo': 'Josué 1:9',
+        'versiculo': 'Josué 1:9; Jeremias 20:9; Mateus 11:28',
         'reflexao': 'A Palavra sustenta a mente quando as emoções vacilam.',
         'opcao_a': 'Josué 1:9',
         'opcao_b': 'Jeremias 20:9',
