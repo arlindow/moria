@@ -3,16 +3,16 @@ from django.contrib.auth.models import User, Group
 
 
 class Command(BaseCommand):
-    help = "Cria 15 usuários no grupo membros"
+    help = "Cria 30 usuários no grupo membros"
 
     def handle(self, *args, **kwargs):
         grupo, criado = Group.objects.get_or_create(name='membros')
 
-        senha_padrao = '@moria123'
+        senha_padrao = '@moria1284'
         total_criados = 0
 
-        for i in range(1, 16):
-            username = f'teste{i}'
+        for i in range(1, 31):
+            username = f'@teste{i}'
 
             if User.objects.filter(username=username).exists():
                 self.stdout.write(

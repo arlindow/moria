@@ -4,6 +4,9 @@ env/
 .venv/
 ENV/
 
+# comandos locais / dados de teste
+celula/management/commands/populate_usuarios.py
+
 # Python (Arquivos compilados)
 __pycache__/
 *.pyc

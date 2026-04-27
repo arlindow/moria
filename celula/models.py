@@ -128,9 +128,10 @@ class Pergunta(models.Model):
     opcao_b = models.CharField(max_length=200, verbose_name='Opção B')
     opcao_c = models.CharField(max_length=200, verbose_name='Opção C')
     opcao_d = models.CharField(max_length=200, verbose_name='Opção D')
+    opcao_e = models.CharField(max_length=200,blank=True,default='',verbose_name='Opção E')
     resposta_correta = models.CharField(
         max_length=1, blank=True,
-        choices=[('A', 'A'), ('B', 'B'), ('C', 'C'), ('D', 'D'), ('', 'Sem resposta certa')],
+        choices=[('A', 'A'), ('B', 'B'), ('C', 'C'), ('D', 'D'), ('E','E'), ('', 'Sem resposta certa')],
         verbose_name='Resposta correta'
     )
     ativa = models.BooleanField(default=True)
@@ -143,12 +144,20 @@ class Pergunta(models.Model):
         return f'[{self.get_tipo_display()}] {self.texto[:60]}'
 
     def opcoes(self):
-        return [
+        lista = [
             {'letra': 'A', 'texto': self.opcao_a},
             {'letra': 'B', 'texto': self.opcao_b},
             {'letra': 'C', 'texto': self.opcao_c},
             {'letra': 'D', 'texto': self.opcao_d},
         ]
+
+        if self.opcao_e:
+            lista.append({
+            'letra': 'E',
+            'texto': self.opcao_e
+        })
+
+        return lista
 
     def to_dict(self):
         return {
