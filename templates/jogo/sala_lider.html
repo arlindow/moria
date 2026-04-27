@@ -275,7 +275,7 @@ function mostrarRevelacao(msg) {
 
   const total = Object.values(msg.contagem).reduce((a, b) => a + b, 0) || 1;
   const cores = { A: '#534AB7', B: '#1D9E75', C: '#D85A30', E: '#BA7517' };
-  const letras = ['A', 'B', 'C', 'D'];
+  const letras = ['A', 'B', 'C', 'D','E'];
 
   const barras = document.getElementById('rev-barras');
   barras.innerHTML = msg.pergunta.opcoes.map((o, i) => {

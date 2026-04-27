@@ -254,7 +254,7 @@ function mostrarRevelacao(msg) {
   document.getElementById('rv-reflexao').innerHTML = '🙏 ' + msg.pergunta.reflexao;
 
   const total = Object.values(msg.contagem).reduce((a, b) => a + b, 0) || 1;
-  const letras = ['A', 'B', 'C', 'D'];
+  const letras = ['A', 'B', 'C', 'D','E'];
   const barras = document.getElementById('rv-barras');
   barras.innerHTML = msg.pergunta.opcoes.map((o, i) => {
     const letra = letras[i];
