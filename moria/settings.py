@@ -13,14 +13,15 @@ SECRET_KEY = config(
 
 DEBUG = config('DEBUG', default=False, cast=bool)
 
-ALLOWED_HOSTS = config(
-    'ALLOWED_HOSTS',
-    default='localhost,127.0.0.1,.onrender.com'
-).split(',')
+# Se estivermos em modo DEBUG (local), liberamos os hosts para facilitar
+if DEBUG:
+    ALLOWED_HOSTS = ['*']
+else:
+    ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1').split(',')
 
-# Render injeta esta variável automaticamente com o domínio público do serviço
+# Adiciona o host do Render ao ALLOWED_HOSTS se existir
 RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
-if RENDER_EXTERNAL_HOSTNAME and RENDER_EXTERNAL_HOSTNAME not in ALLOWED_HOSTS:
+if RENDER_EXTERNAL_HOSTNAME:
     ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
 # ── Autenticação ──────────────────────────────────────────────────────────────
@@ -176,3 +177,5 @@ CSRF_TRUSTED_ORIGINS += [
 _render_host = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
 if _render_host:
     CSRF_TRUSTED_ORIGINS.append(f'https://{_render_host}')
+
+
